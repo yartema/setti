@@ -1,7 +1,5 @@
 # nixo
 
-# nixo
-
 > **Fullstack React framework** on **React 19** + **Fastify 5** + **Vite**.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
