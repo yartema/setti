@@ -1,0 +1,12 @@
+.nixo-btn {
+    background: #4f46e5;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+}
+.nixo-btn:hover {
+    background: #4338ca;
+}

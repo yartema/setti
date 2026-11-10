@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "nixo": ["./node_modules/nixo/src/index.ts"],
+      "nixo/server": ["./node_modules/nixo/src/server.ts"],
+      "nixo/client": ["./node_modules/nixo/src/client/index.ts"]
+    }
+  },
+  "include": [
+    "client/**/*.ts",
+    "client/**/*.tsx",
+    "server/**/*.ts",
+    "server/**/*.tsx",
+    "nixo.config.ts"
+  ]
+}

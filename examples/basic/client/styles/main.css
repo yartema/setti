@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* Глобальные мелочи — остальное через Tailwind-классы. */
+html {
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+}

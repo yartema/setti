@@ -1,0 +1,9 @@
+/* Локальный CSS для About — демонстрация `import './view.css'` рядом с Tailwind. */
+.nixo-pulse {
+    animation: nixo-pulse 2s ease-in-out infinite;
+}
+
+@keyframes nixo-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}

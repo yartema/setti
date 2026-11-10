@@ -1,0 +1,22 @@
+{
+  "name": "examples-basic",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nixo dev",
+    "inspect": "nixo inspect",
+    "nixo": "nixo"
+  },
+  "dependencies": {
+    "nixo": "workspace:*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^5.7.2"
+  }
+}
