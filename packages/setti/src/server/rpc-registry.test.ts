@@ -12,9 +12,7 @@ import type { RpcObjectDefinition } from '../types'
 function makeObject(partial: Partial<RpcObjectDefinition> & { name: string }): RpcObjectDefinition {
     return {
         methods: {
-            Ping: {
-                handler: async () => ({ ok: true }),
-            },
+            Ping: { handler: async () => ({ ok: true }) },
         },
         ...partial,
     }
@@ -69,11 +67,9 @@ describe('RpcRegistry', () => {
             ).toThrow(/handler is not a function/)
         })
 
-        it('бросает на дубле метода (через два объекта)', () => {
+        it('разные объекты с одинаковым именем метода — ок', () => {
             const reg = new RpcRegistry()
             reg.add(makeObject({ name: 'Users' }))
-            // Другой объект с тем же именем — сначала Duplicate object.
-            // А вот два разных объекта с разными именами и одним методом — ок.
             reg.add(makeObject({ name: 'Staff' }))
             expect(reg.size).toBe(2)
         })
@@ -88,7 +84,6 @@ describe('RpcRegistry', () => {
                 },
             })
             expect(() => reg.add(badObj)).toThrow()
-            // Ничего не зарегистрировано
             expect(reg.size).toBe(0)
             expect(reg.get('Users')).toBeUndefined()
             expect(reg.getMethod('Users.Good')).toBeUndefined()
@@ -133,14 +128,8 @@ describe('RpcRegistry', () => {
                     name: 'Users',
                     description: 'Пользователи',
                     methods: {
-                        List: {
-                            description: 'Список',
-                            handler: async () => [],
-                        },
-                        Read: {
-                            auth: true,
-                            handler: async () => null,
-                        },
+                        List: { description: 'Список', handler: async () => [] },
+                        Read: { auth: true, handler: async () => null },
                     },
                 }),
             )
@@ -184,10 +173,7 @@ describe('RpcRegistry', () => {
                 makeObject({
                     name: 'Users',
                     methods: {
-                        Internal: {
-                            internal: true,
-                            handler: async () => null,
-                        },
+                        Internal: { internal: true, handler: async () => null },
                     },
                 }),
             )
@@ -222,10 +208,8 @@ describe('RpcRegistry', () => {
 
         it('listObjects возвращает все объекты', () => {
             const reg = new RpcRegistry()
-            const a = makeObject({ name: 'A' })
-            const b = makeObject({ name: 'B' })
-            reg.add(a)
-            reg.add(b)
+            reg.add(makeObject({ name: 'A' }))
+            reg.add(makeObject({ name: 'B' }))
             const objs = reg.listObjects()
             expect(objs).toHaveLength(2)
             expect(objs.map((o) => o.name).sort()).toEqual(['A', 'B'])

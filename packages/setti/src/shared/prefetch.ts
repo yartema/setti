@@ -166,7 +166,15 @@ export async function runPagePrefetch(
     })
 
     for (const name of sorted) {
-        const def = factoryMap[name]!
+        const def = factoryMap[name]
+
+        // `sorted` может содержать глобальные зависимости (`userInfo`, ...):
+        // `topoSort` обходит всю цепочку `dependencies`, включая узлы из
+        // `globalStates`. Глобальные уже загружены в `states` (через
+        // `new Map(globalStates)` выше) и зарегистрированы в registry.
+        // Их `loadData` повторно не вызываем — только page-фабрики.
+        if (!def) continue
+
         const implRaw = await loadModule(def.dataFactoryName)
         const impl = implRaw as Partial<FactoryImplementation>
         if (!impl || typeof impl.loadData !== 'function' || typeof impl.slice !== 'function') {

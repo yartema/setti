@@ -29,9 +29,18 @@ export async function loadConfig(projectDir: string): Promise<ResolvedSettiConfi
         interopDefault: true,
         jsx: true,
     })
-    const mod = (await jiti.import(target, { default: true })) as SettiConfig | undefined
 
-    if (!mod || typeof mod !== 'object') {
+    // jiti с `export default null` может упасть внутри (Cannot read 'then').
+    // Ловим и превращаем в понятную ошибку.
+    let mod: SettiConfig | undefined
+    try {
+        const moduleNs = (await jiti.import(target)) as { default?: SettiConfig } | null | undefined
+        mod = moduleNs?.default
+    } catch {
+        mod = undefined
+    }
+
+    if (!mod || typeof mod !== 'object' || Array.isArray(mod)) {
         throw new SettiError(`Config at ${target} must export a default object`)
     }
 

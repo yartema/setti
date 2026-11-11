@@ -26,16 +26,23 @@ export async function scan(clientDir: string): Promise<ScanResult> {
     const loaderModules: ScanResult['loaderModules'] = []
 
     // --- Шаг 1: router.ts на первом уровне подкаталогов clientDir ---
-    let topLevelEntries: Array<import('node:fs').Dirent>
+    let topLevelEntries: import('node:fs').Dirent[]
     try {
         topLevelEntries = await fs.readdir(clientDir, { withFileTypes: true })
     } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            // Несуществующий clientDir — это пустой проект, не ошибка.
+            return { routeModules: [], loaderModules: [] }
+        }
         throw new SettiError(`Failed to read clientDir "${clientDir}": ${(err as Error).message}`)
     }
 
     for (const entry of topLevelEntries) {
         if (!entry.isDirectory()) continue
+        // Пропускаем node_modules, .cache, .git — не пользовательский код.
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue
         const routerPath = path.join(clientDir, entry.name, 'router.ts')
+
         if (!(await fileExists(routerPath))) continue
 
         const mod = (await jiti.import(routerPath)) as Record<string, unknown>
@@ -55,11 +62,24 @@ export async function scan(clientDir: string): Promise<ScanResult> {
     // --- Шаг 2: рекурсивный поиск *.loader.ts ---
     await walkFiles(clientDir, async (file) => {
         if (!file.endsWith('.loader.ts') && !file.endsWith('.loader.js')) return
+
         const mod = (await jiti.import(file)) as Record<string, unknown>
-        const map = mod.default
-        if (!map || typeof map !== 'object') {
+        const rawMap = mod.default
+        if (!rawMap || typeof rawMap !== 'object' || Array.isArray(rawMap)) {
             throw new SettiError(`Loader file "${file}" must default-export a factory map (defineGlobalLoader({...}))`)
         }
+        const map = rawMap as FactoryMap
+        // Валидация: каждая фабрика должна иметь `dataFactoryName: string`.
+        for (const [name, def] of Object.entries(map)) {
+            if (
+                !def ||
+                typeof def !== 'object' ||
+                typeof (def as { dataFactoryName?: unknown }).dataFactoryName !== 'string'
+            ) {
+                throw new SettiError(`Loader "${name}" in "${file}" must have "dataFactoryName: string"`)
+            }
+        }
+
         loaderModules.push({ file, map: map as FactoryMap })
     })
 
