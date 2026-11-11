@@ -70,6 +70,7 @@ Desktop.ini
 # === Vite press / docs build (на будущее) ===
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+docs/
 
 # === Misc ===
 .cache-loader/
