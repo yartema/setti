@@ -78,3 +78,4 @@ tmp/
 .eslintcache
 .stylelintcache
 .parcel-cache/
+packages/setti/README.md

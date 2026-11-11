@@ -1,5 +1,5 @@
 import type { JSX, ReactNode } from 'react'
-import { Link, Outlet, usePathname } from 'nixo/client';
+import { Link, Outlet, usePathname } from 'setti/client';
 
 /**
  * Основной layout: header с навигацией, main, footer.
@@ -13,7 +13,7 @@ export default function Main(): JSX.Element {
                 <Outlet />
             </main>
             <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
-                nixo · React 19 · Fastify · Vite
+                setti · React 19 · Fastify · Vite
             </footer>
         </div>
     )
@@ -30,7 +30,7 @@ function Header(): JSX.Element {
             <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
                 <Link href="/" className="flex items-center gap-2 text-lg font-bold">
           <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-sm font-mono text-white">
-            nixo
+            setti
           </span>
                     <span className="text-slate-700">demo</span>
                 </Link>

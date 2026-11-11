@@ -1,5 +1,5 @@
-import { Slice } from 'nixo'
-import type { FactoryImplementation, NixoRouter } from 'nixo'
+import { Slice } from 'setti'
+import type { FactoryImplementation, SettiRouter } from 'setti'
 
 /** Пост. */
 export interface Post {
@@ -16,7 +16,7 @@ export class PostSlice extends Slice<Post> {}
  */
 export const BlogPostLoader: FactoryImplementation<Post> = {
     async loadData(_args, _deps, ctx) {
-        const router = ctx.router as NixoRouter
+        const router = ctx.router as SettiRouter
         const slug = router.params.slug ?? 'unknown'
         return {
             slug,

@@ -1,5 +1,5 @@
-import { Slice, NixoService } from 'nixo'
-import type { FactoryImplementation } from 'nixo'
+import { Slice, SettiService } from 'setti'
+import type { FactoryImplementation } from 'setti'
 
 /** Данные для About. */
 export interface AboutStatsState {
@@ -9,7 +9,7 @@ export interface AboutStatsState {
 }
 
 /** Сервис для System.Ping. */
-const systemService = new NixoService({ endpoint: 'System' })
+const systemService = new SettiService({ endpoint: 'System' })
 
 /** Слайс. */
 export class StatsSlice extends Slice<AboutStatsState> {}

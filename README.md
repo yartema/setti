@@ -1,4 +1,4 @@
-# nixo
+# SETTI
 
 > **Fullstack React framework** on **React 19** + **Fastify 5** + **Vite**.
 
@@ -13,11 +13,13 @@
 
 > ⚠️ **Pre-alpha (`0.1.0-alpha`).**
 >
-> - Пакет **не опубликован** в npm. Установка — через монорепо (см. [Быстрый старт](#-быстрый-старт)).
+> ⚠️ **Pre-alpha (`0.1.0-alpha`).**
+> - Установка: `pnpm add setti@alpha`
+> - **API может измениться** до `1.0.0`.
+> - **Не используйте в production.**
 > - **API и функционал могут измениться** без предупреждения в любой момент до стабильного `1.0.0`.
-> - **Не используйте в production** — фреймворк в активной разработке.
 > - Обратная совместимость **не гарантируется** между alpha-версиями (`0.1.0-alpha.0` → `0.1.0-alpha.1`).
-> - Следите за [Releases](https://github.com/your-username/nixo/releases) — там breaking changes помечаются явно.
+> - Следите за [Releases](https://github.com/yartema/setti/releases) — там breaking changes помечаются явно.
 
 ---
 
@@ -69,7 +71,7 @@ pnpm --filter examples-basic exec nixo start    # prod-сервер
 
 ```ts
 // client/HomePage/router.ts
-import { defineRoute } from 'nixo'
+import { defineRoute } from 'setti'
 
 export default defineRoute([
   {
@@ -95,7 +97,7 @@ export default defineRoute([
 
 ```ts
 // client/HomePage/Factories/Root.ts
-import type { FactoryMap, NixoRouter } from 'nixo'
+import type { FactoryMap, NixoRouter } from 'setti'
 
 export default function getConfig(
   configParams: Record<string, unknown>,
@@ -115,7 +117,7 @@ export default function getConfig(
 
 ```ts
 // client/HomePage/Factories/usersList.ts
-import { Slice, NixoService, type FactoryImplementation } from 'nixo'
+import { Slice, NixoService, type FactoryImplementation } from 'setti'
 
 interface User { id: number; name: string }
 interface UserListState {
@@ -155,7 +157,7 @@ export const UserListLoader: FactoryImplementation<UserListState> = {
 
 ```tsx
 // client/HomePage/view.tsx
-import { useSlice, usePathname, Link } from 'nixo/client'
+import { useSlice, usePathname, Link } from 'setti/client'
 import type { UserListSlice } from './Factories/usersList'
 
 export function View() {
@@ -179,8 +181,8 @@ export function View() {
 
 ```ts
 // server/users/Users.meta.ts
-import { defineObject } from 'nixo/server'
-import type { RpcContext } from 'nixo/server'
+import { defineObject } from 'setti/server'
+import type { RpcContext } from 'setti/server'
 import * as v from 'valibot'
 
 export default defineObject({
@@ -210,7 +212,7 @@ export default defineObject({
 
 ```ts
 // nixo.config.ts
-import { defineNixoConfig } from 'nixo'
+import { defineNixoConfig } from 'setti'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineNixoConfig({
@@ -342,7 +344,7 @@ pnpm typecheck
 
 # Dev-сервер демо
 pnpm dev:basic
-NIXO_DEBUG=1 pnpm dev:basic      # + логи __NIXO_STATE_STR__
+SETTI_DEBUG=1 pnpm dev:basic      # + логи __NIXO_STATE_STR__
 
 # Prod
 pnpm --filter examples-basic exec nixo build
@@ -432,7 +434,7 @@ pnpm inspect:basic
 
 ### Если вы уже используете nixo
 
-- **Фиксируйте точную версию** — `pnpm add nixo@0.1.0-alpha.3` (не `@alpha`).
+- **Фиксируйте точную версию** — `pnpm add setti@0.1.0-alpha.3` (не `@alpha`).
 - **Читайте Release Notes** перед `pnpm update nixo`.
 - **Пишите обёртки** над публичным API — если сигнатура изменится, поправите в одном месте.
 - **Сообщайте о проблемах** — [Issues](https://github.com/your-username/nixo/issues) помогают стабилизировать API раньше.

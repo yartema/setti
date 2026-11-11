@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { Outlet } from 'nixo/client'
+import { Outlet } from 'setti/client'
 
 /**
  * Вложенный layout для админки. Оборачивает страницу в `Main`.

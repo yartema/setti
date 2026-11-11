@@ -1,4 +1,4 @@
-import type { FactoryMap, NixoRouter } from 'nixo'
+import type { FactoryMap, SettiRouter } from 'setti'
 
 /**
  * `getConfig` для страницы HomePage.
@@ -11,7 +11,7 @@ import type { FactoryMap, NixoRouter } from 'nixo'
  */
 export default function getConfig(
     _configParams: Record<string, unknown>,
-    _router: NixoRouter,
+    _router: SettiRouter,
 ): FactoryMap {
     return {
         UserList: {

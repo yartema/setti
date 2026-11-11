@@ -13,5 +13,5 @@ interface ButtonProps {
  * @returns JSX-элемент.
  */
 export function Button(props: ButtonProps): JSX.Element {
-    return <button className="nixo-btn">{props.children}</button>
+    return <button className="setti-btn">{props.children}</button>
 }

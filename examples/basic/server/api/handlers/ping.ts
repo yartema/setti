@@ -1,4 +1,4 @@
-import type { ApiRouteContext } from 'nixo/server'
+import type { ApiRouteContext } from 'setti/server'
 
 /**
  * Пример API-роута: `GET /api/ping`.

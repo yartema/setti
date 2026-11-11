@@ -2,6 +2,8 @@
 packages:
   - 'packages/*'
   - 'examples/*'
+allowBuilds:
+  esbuild: true
 minimumReleaseAgeExclude:
   - '@rolldown/binding-android-arm-eabi@1.2.18'
   - '@rolldown/binding-android-arm64@1.2.18'
@@ -21,3 +23,7 @@ minimumReleaseAgeExclude:
   - '@vitejs/plugin-react@6.3.0'
   - rolldown@1.2.18
   - vite@8.3.7
+overrides:
+  react: ^19.0.0
+  react-dom: ^19.0.0
+  devalue: ^6.0.3

@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { Link, usePathname } from 'nixo/client'
+import { Link, usePathname } from 'setti/client'
 
 /**
  * Кастомная 404.

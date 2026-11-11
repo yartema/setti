@@ -6,10 +6,10 @@ import {
     usePathname,
     useRouter,
     Link,
-} from 'nixo/client'
+} from 'setti/client'
 import type { UserListSlice } from './Factories/usersList'
 import type { UserInfoSlice } from '../User/loaders/userInfo'
-import { NixoService } from 'nixo'
+import { SettiService } from 'setti'
 import { usersService } from './Factories/usersList'
 
 /**
@@ -63,7 +63,7 @@ export function View(): JSX.Element {
         <div className="space-y-8">
             <section>
                 <h1 className="text-4xl font-bold tracking-tight text-slate-900">
-                    nixo demo
+                    setti demo
                 </h1>
                 <p className="mt-2 text-slate-600">
                     React 19 · Fastify · Vite · SSR + SPA · Tailwind
@@ -155,7 +155,7 @@ export function View(): JSX.Element {
                         </button>
                         <button
                             onClick={() => {
-                                NixoService.invalidateAll()
+                                SettiService.invalidateAll()
                                 setApiResult('all cache invalidated')
                             }}
                             className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"

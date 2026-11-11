@@ -1,4 +1,4 @@
-import { defineServerRoutes } from 'nixo/server'
+import { defineServerRoutes } from 'setti/server'
 
 /**
  * API-роуты примера.

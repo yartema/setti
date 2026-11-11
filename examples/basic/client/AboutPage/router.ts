@@ -1,4 +1,4 @@
-import { defineRoute } from 'nixo'
+import { defineRoute } from 'setti'
 
 /**
  * Маршрут страницы About.
@@ -7,7 +7,7 @@ export default defineRoute([
     {
         id: 'about',
         title: 'About',
-        description: 'О фреймворке nixo',
+        description: 'О фреймворке setti',
         type: 'main',
         middleware: [],
         contentConfig: {

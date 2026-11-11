@@ -1,4 +1,4 @@
-import { defineGlobalLoader } from 'nixo'
+import { defineGlobalLoader } from 'setti'
 
 /**
  * Глобальные loaders: `userInfo` доступен всем страницам.

@@ -7,7 +7,7 @@ import {
     useParams,
     useRouter,
     Link,
-} from 'nixo/client'
+} from 'setti/client'
 import type { UserInfoSlice } from '../User/loaders/userInfo'
 import type { StatsSlice } from './Factories/stats'
 import './view.css'
@@ -95,12 +95,12 @@ export function View(): JSX.Element {
                             'Client + server middleware',
                             'API routes (Fastify)',
                             'Prefetch pipeline',
-                            'Prod build (nixo build/start)',
+                            'Prod build (setti build/start)',
                             'Tailwind v4',
                             'Link / router.push / back',
                         ].map((f) => (
                             <li key={f} className="flex items-center gap-2 text-slate-700">
-                                <span className="nixo-pulse text-emerald-500">●</span>
+                                <span className="setti-pulse text-emerald-500">●</span>
                                 {f}
                             </li>
                         ))}

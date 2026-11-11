@@ -3,12 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nixo dev",
-    "inspect": "nixo inspect",
-    "nixo": "nixo"
+    "dev": "setti dev",
+    "inspect": "setti inspect",
+    "setti": "setti"
   },
   "dependencies": {
-    "nixo": "workspace:*",
+    "setti": "workspace:*",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

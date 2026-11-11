@@ -1,4 +1,4 @@
-import { defineRoute } from 'nixo'
+import { defineRoute } from 'setti'
 
 /**
  * Маршрут админки. `parentId: 'home'` → URL `/admin`

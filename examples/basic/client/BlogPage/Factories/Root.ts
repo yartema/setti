@@ -1,4 +1,4 @@
-import type { FactoryMap } from 'nixo'
+import type { FactoryMap } from 'setti'
 
 /**
  * `getConfig` для страницы Blog.

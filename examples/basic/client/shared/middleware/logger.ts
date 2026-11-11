@@ -9,7 +9,7 @@ export async function server(
     ctx: Record<string, unknown>,
 ): Promise<void> {
     const router = ctx.router as { path: string } | undefined
-    console.log('[nixo-server-logger]', router?.path ?? '?')
+    console.log('[setti-server-logger]', router?.path ?? '?')
 }
 
 /**
@@ -24,5 +24,5 @@ export async function client(
 ): Promise<void> {
     const to = ctx.to as { path: string }
     const from = ctx.from as { path: string }
-    console.log('[nixo-client-logger]', from.path, '→', to.path)
+    console.log('[setti-client-logger]', from.path, '→', to.path)
 }

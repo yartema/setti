@@ -1,5 +1,5 @@
-import { defineObject } from 'nixo/server'
-import type { RpcContext } from 'nixo/server'
+import { defineObject } from 'setti/server'
+import type { RpcContext } from 'setti/server'
 
 /**
  * Объект БЛ "Users" — демонстрация JSON-RPC.
