@@ -9,7 +9,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6%20%7C%208-646CFF.svg)](https://vitejs.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg)](https://www.typescriptlang.org)
 
-**nixo** — мета-фреймворк уровня Nuxt/Next, который собирается из трёх проверенных инструментов: React, Fastify, Vite. Устанавливается как зависимость, сканирует `client/`, строит карту маршрутов, поднимает сервер с SSR/SPA и JSON-RPC 2.0 — без магии, без RSC, без Server Actions.
+**setti** — мета-фреймворк уровня Nuxt/Next, который собирается из трёх проверенных инструментов: React, Fastify, Vite. Устанавливается как зависимость, сканирует `client/`, строит карту маршрутов, поднимает сервер с SSR/SPA и JSON-RPC 2.0 — без магии, без RSC, без Server Actions.
 
 > ⚠️ **Pre-alpha (`0.1.0-alpha`).**
 >
@@ -25,18 +25,18 @@
 
 ## ✨ Что внутри
 
-- **SSR из коробки** — `renderToPipeableStream` + `hydrateRoot`, стриминг, единый `NixoContext` между сервером и клиентом.
+- **SSR из коробки** — `renderToPipeableStream` + `hydrateRoot`, стриминг, единый `SettiContext` между сервером и клиентом.
 - **SPA по требованию** — глобально (`ssr: false`), per-route (`route.ssr: false`) или через `?noSSR=true` для отладки.
 - **Файловый роутинг** — `client/*/router.ts` → `defineRoute([...])`. Динамические сегменты через `slug: ['/regex:[a-z0-9-]+']` или `path: '/blog/:slug'`.
 - **Вложенные layouts** — по `parentId`, рендер цепочкой `root → admin → page`. `<Outlet/>` или `props.children` на выбор.
 - **JSON-RPC 2.0 из коробки** — `defineObject` в `server/**/*.meta.ts`, endpoint `/service`, batch, валидация через Standard Schema (valibot / zod / arktype), auth, `ctx.call`, `System.Describe`.
 - **Три реестра middleware** — client-page, server-page, server-api. Не смешиваются, наследуются по `parentId`.
 - **Слайсы** — собственный реактивный store (`Slice` / `AbstractSlice` / `SliceRegistry`). Page-scoped и global, авто `disposePage()` при навигации, `useSlice` / `useStrictSlice` / `useSliceRef`.
-- **Cross-page кэш на уровне `NixoService`** — TTL, `invalidate()`, `<Link prefetch>` заполняет кэш по hover. Не на уровне страниц — на уровне вызовов.
+- **Cross-page кэш на уровне `SettiService`** — TTL, `invalidate()`, `<Link prefetch>` заполняет кэш по hover. Не на уровне страниц — на уровне вызовов.
 - **`devalue` для сериализации** — `Map`, `Set`, `Date`, `BigInt`, `undefined`, `NaN`, циклы переживают SSR и восстанавливаются на клиенте.
-- **Client-safe разделение** — три точки входа: `nixo` (pure TS), `nixo/server` (Node-only), `nixo/client` (React). `nixo` не тянет jiti/fastify/vite.
+- **Client-safe разделение** — три точки входа: `setti` (pure TS), `setti/server` (Node-only), `setti/client` (React). `setti` не тянет jiti/fastify/vite.
 - **Error boundaries / Loading / Not Found** — через `config.components`, с дефолтами.
-- **Prod build** — `nixo build` → `dist/client` + `dist/server`. `nixo start` — Fastify + статика.
+- **Prod build** — `setti build` → `dist/client` + `dist/server`. `setti start` — Fastify + статика.
 
 ---
 
@@ -45,8 +45,8 @@
 Пока пакет не в npm — клонируйте монорепо и запустите демо:
 
 ```bash
-git clone https://github.com/your-username/nixo.git
-cd nixo
+git clone https://github.com/your-username/setti.git
+cd setti
 pnpm install
 pnpm dev:basic
 ```
@@ -59,8 +59,8 @@ pnpm dev:basic
 pnpm lint                         # ESLint
 pnpm typecheck                    # tsc --noEmit
 pnpm inspect:basic                # dump маршрутов и RPC-методов
-pnpm --filter examples-basic exec nixo build    # prod-сборка
-pnpm --filter examples-basic exec nixo start    # prod-сервер
+pnpm --filter examples-basic exec setti build    # prod-сборка
+pnpm --filter examples-basic exec setti start    # prod-сервер
 ```
 
 ---
@@ -97,11 +97,11 @@ export default defineRoute([
 
 ```ts
 // client/HomePage/Factories/Root.ts
-import type { FactoryMap, NixoRouter } from 'setti'
+import type { FactoryMap, SettiRouter } from 'setti'
 
 export default function getConfig(
   configParams: Record<string, unknown>,
-  router: NixoRouter,
+  router: SettiRouter,
 ): FactoryMap {
   return {
     UserList: {
@@ -117,7 +117,7 @@ export default function getConfig(
 
 ```ts
 // client/HomePage/Factories/usersList.ts
-import { Slice, NixoService, type FactoryImplementation } from 'setti'
+import { Slice, SettiService, type FactoryImplementation } from 'setti'
 
 interface User { id: number; name: string }
 interface UserListState {
@@ -126,7 +126,7 @@ interface UserListState {
   reload: () => void
 }
 
-const usersService = new NixoService({
+const usersService = new SettiService({
   endpoint: 'Users',
   binding: { query: 'List' },
   cache: 30_000, // cross-page кэш на 30 сек
@@ -211,11 +211,11 @@ export default defineObject({
 ### Конфиг
 
 ```ts
-// nixo.config.ts
-import { defineNixoConfig } from 'setti'
+// setti.config.ts
+import { defineSettiConfig } from 'setti'
 import tailwindcss from '@tailwindcss/vite'
 
-export default defineNixoConfig({
+export default defineSettiConfig({
   ssr: true,
   layouts: {
     main: './layouts/Main.tsx',
@@ -244,7 +244,7 @@ export default defineNixoConfig({
 ┌─────────────────────── Браузер ───────────────────────┐
 │                                                        │
 │  client/*/router.ts ──► defineRoute([...])             │
-│  client/*/Factories ──► getConfig → NixoService        │
+│  client/*/Factories ──► getConfig → SettiService        │
 │  client/*/view.tsx ───► useSlice / useRouter / <Link>  │
 │                                                        │
 └─────────────────┬──────────────────────────────────────┘
@@ -265,24 +265,24 @@ export default defineNixoConfig({
 
 **Ключевые архитектурные решения:**
 
-- **`loadData` изоморфный** — работает на сервере и клиенте, только `fetch('/api/...')` или `NixoService.call(...)`. Никаких прямых обращений к БД, никаких Server Actions.
+- **`loadData` изоморфный** — работает на сервере и клиенте, только `fetch('/api/...')` или `SettiService.call(...)`. Никаких прямых обращений к БД, никаких Server Actions.
 - **JSON-RPC для чтения и мутаций** — единый протокол, типизация через Standard Schema, `ctx.call` для композиции методов.
 - **`ctx.stomp.message(key, payload)`** — real-time push (в разработке).
 - **Три реестра middleware** — не смешиваются, каждый со своим контекстом.
-- **`nixo` / `nixo/server` / `nixo/client`** — client-safe разделение, `nixo` не тянет Node.
+- **`setti` / `setti/server` / `setti/client`** — client-safe разделение, `setti` не тянет Node.
 
 ---
 
 ## 📂 Структура репозитория
 
 ```
-nixo/
+setti/
 ├── packages/
-│   └── nixo/                  # сам фреймворк
+│   └── setti/                  # сам фреймворк
 │       ├── src/
-│       │   ├── index.ts       # nixo (client-safe)
-│       │   ├── server.ts      # nixo/server (Node-only)
-│       │   ├── client/        # nixo/client (React)
+│       │   ├── index.ts       # setti (client-safe)
+│       │   ├── server.ts      # setti/server (Node-only)
+│       │   ├── client/        # setti/client (React)
 │       │   ├── shared/        # prefetch (изоморфный)
 │       │   ├── server/        # Fastify, SSR, RPC, STOMP (wip)
 │       │   ├── build/         # build pipeline
@@ -293,12 +293,12 @@ nixo/
 │   └── basic/                 # демо на Tailwind v4
 │       ├── client/            # Home / About / Blog / Admin
 │       ├── server/            # API + JSON-RPC meta
-│       └── nixo.config.ts
+│       └── setti.config.ts
 │
 └── docs/                      # (скоро)
 ```
 
-**Документация фреймворка** — [`packages/nixo/README.md`](packages/nixo/README.md). Там всё: API, схемы, подводные камни, roadmap.
+**Документация фреймворка** — [`packages/setti/README.md`](packages/setti/README.md). Там всё: API, схемы, подводные камни, roadmap.
 
 ---
 
@@ -307,9 +307,9 @@ nixo/
 ### ✅ Готово (Phase 1–4)
 
 - **Phase 1** — SSR, SPA, prod build, CSS (Tailwind / per-component), enriched `_initState`
-- **Phase 2** — `defineServerRoutes`, `defineServerPlugins`, 3 реестра middleware, `useRouter` / `<Link>`, JSON-RPC 2.0 (`/service`), `NixoService` с ALS executor
+- **Phase 2** — `defineServerRoutes`, `defineServerPlugins`, 3 реестра middleware, `useRouter` / `<Link>`, JSON-RPC 2.0 (`/service`), `SettiService` с ALS executor
 - **Phase 3** — динамические сегменты (`slug` / `path`), вложенные layouts по `parentId`, per-route `ssr: false`, error boundaries / loading / notFound
-- **Phase 4** — `System.Describe`, рекурсивный CSS-scan, `devalue` (`Map` / `Date` / cyclic), cross-page кэш в `NixoService`
+- **Phase 4** — `System.Describe`, рекурсивный CSS-scan, `devalue` (`Map` / `Date` / cyclic), cross-page кэш в `SettiService`
 
 ### 🚧 В разработке
 
@@ -318,9 +318,9 @@ nixo/
 
 ### 📋 Запланировано
 
-- `create-nixo-app` — CLI-скаффолдер (`pnpm dlx create-nixo-app my-app`)
-- Пресеты (`defineNixoConfig({ preset: 'tailwind' })`)
-- Сайт документации (сам nixo на nixo)
+- `create-setti-app` — CLI-скаффолдер (`pnpm dlx create-setti-app my-app`)
+- Пресеты (`defineSettiConfig({ preset: 'tailwind' })`)
+- Сайт документации (сам setti на setti)
 - Юнит-тесты (`compileRoute`, `matchRoute`, `RpcRegistry`, сканер)
 - Redis-adapter для STOMP (PM2 / cluster)
 - Auto-invalidate при мутациях (`create`/`update`/`destroy` → сброс `List`)
@@ -328,7 +328,7 @@ nixo/
 ### ❌ Не планируется
 
 - **React Server Components** — осознанно. Другая архитектура, месяцы работы, ломает `Slice` / `loadData` / `defineObject`.
-- **Server Actions** — осознанно. JSON-RPC + `NixoService.call` покрывает мутации.
+- **Server Actions** — осознанно. JSON-RPC + `SettiService.call` покрывает мутации.
 
 ---
 
@@ -344,11 +344,11 @@ pnpm typecheck
 
 # Dev-сервер демо
 pnpm dev:basic
-SETTI_DEBUG=1 pnpm dev:basic      # + логи __NIXO_STATE_STR__
+SETTI_DEBUG=1 pnpm dev:basic      # + логи __SETTI_STATE_STR__
 
 # Prod
-pnpm --filter examples-basic exec nixo build
-pnpm --filter examples-basic exec nixo start
+pnpm --filter examples-basic exec setti build
+pnpm --filter examples-basic exec setti start
 
 # Дамп маршрутов и RPC-методов
 pnpm inspect:basic
@@ -368,12 +368,12 @@ pnpm inspect:basic
 
 ### Подводные камни (для контрибьюторов)
 
-Перед правкой `vite/plugin.ts` или `server/ssr-handler.ts` прочитайте раздел «Подводные камни» в [`packages/nixo/README.md`](packages/nixo/README.md). Особенно:
+Перед правкой `vite/plugin.ts` или `server/ssr-handler.ts` прочитайте раздел «Подводные камни» в [`packages/setti/README.md`](packages/setti/README.md). Особенно:
 
-- `NixoProvider` / `SliceRegistry` / `devalueParse` — **только** через `vite.ssrLoadModule` (dev) / `dist/server/entry.js` (prod).
-- `nixo` не должен тянуть Node-зависимости.
+- `SettiProvider` / `SliceRegistry` / `devalueParse` — **только** через `vite.ssrLoadModule` (dev) / `dist/server/entry.js` (prod).
+- `setti` не должен тянуть Node-зависимости.
 - После правок `plugin.ts` / `serialize.ts` — **всегда** `rm -rf examples/basic/node_modules/.vite`.
-- Всё, что `create-server.ts` передаёт в `nixoPlugin`, должен передавать и `build-client.ts` / `build-server.ts` (иначе dev ≠ prod).
+- Всё, что `create-server.ts` передаёт в `settiPlugin`, должен передавать и `build-client.ts` / `build-server.ts` (иначе dev ≠ prod).
 
 ---
 
@@ -386,13 +386,13 @@ pnpm inspect:basic
 3. **Astro — контент-фреймворк.** Для дашбордов и админок неудобен.
 4. **React Router 7 / Remix** — ментальная модель другая (loader'ы в route-модулях, actions, form-first). Не всем подходит.
 
-**nixo** — для тех, кому нужен:
+**setti** — для тех, кому нужен:
 
 - **React 19 + Fastify + Vite** — три понятных инструмента, без магии.
 - **JSON-RPC вместо REST** — типизированный, валидируемый, batch-friendly.
 - **Изоморфный `loadData`** — один код на сервере и клиенте, только `fetch('/api/...')`.
 - **`Slice` вместо Redux/Zustand** — встроенный, per-route, auto-dispose.
-- **Client-safe разделение** — `nixo` (pure), `nixo/server` (Node), `nixo/client` (React). Явно, без сюрпризов.
+- **Client-safe разделение** — `setti` (pure), `setti/server` (Node), `setti/client` (React). Явно, без сюрпризов.
 - **Контроль** — не «чёрный ящик», а 4 000 строк читаемого TypeScript.
 
 Если узнали себя — попробуйте демо.
@@ -405,16 +405,16 @@ pnpm inspect:basic
 
 ### Что может измениться без предупреждения
 
-- **Публичный API** — сигнатуры `defineRoute`, `defineGlobalLoader`, `defineObject`, `NixoService`, `Slice`, хуков (`useSlice`, `useRouter`, `useStomp`, ...).
-- **Формат конфига** (`nixo.config.ts`) — поля могут переименовываться, получать новые опции, менять дефолты.
-- **Схема маршрута** (`NixoRoute`) — `path`, `slug`, `ssr`, `middleware`, `contentConfig` и т.д.
+- **Публичный API** — сигнатуры `defineRoute`, `defineGlobalLoader`, `defineObject`, `SettiService`, `Slice`, хуков (`useSlice`, `useRouter`, `useStomp`, ...).
+- **Формат конфига** (`setti.config.ts`) — поля могут переименовываться, получать новые опции, менять дефолты.
+- **Схема маршрута** (`SettiRoute`) — `path`, `slug`, `ssr`, `middleware`, `contentConfig` и т.д.
 - **JSON-RPC** — wire-протокол, формат `System.Describe`, коды ошибок.
-- **Внутренние детали**, которые просачиваются наружу: `__NIXO_STATE_STR__`, `__NIXO_MIDDLEWARE__`, `virtual:nixo/*` modules, `dist/server/entry.js`.
-- **Поведение** — например, дефолтный `cache` в `NixoService` может стать `30_000` вместо `0`, `index: true` может потребовать `ssr: true` явно и т.д.
+- **Внутренние детали**, которые просачиваются наружу: `__SETTI_STATE_STR__`, `__SETTI_MIDDLEWARE__`, `virtual:setti/*` modules, `dist/server/entry.js`.
+- **Поведение** — например, дефолтный `cache` в `SettiService` может стать `30_000` вместо `0`, `index: true` может потребовать `ssr: true` явно и т.д.
 
 ### Что стабилизируется раньше
 
-- **`defineNixoConfig`** — базовая структура (`ssr`, `clientDir`, `serverDir`, `layouts`, `css`) вряд ли изменится.
+- **`defineSettiConfig`** — базовая структура (`ssr`, `clientDir`, `serverDir`, `layouts`, `css`) вряд ли изменится.
 - **`defineRoute`** — структура маршрута (id, parentId, title, type) — фундаментальная.
 - **`Slice` / `AbstractSlice`** — `hydrate`, `getState`, `setState`, `subscribe` — ядро реактивности.
 - **`loadData(args, deps, ctx)`** — сигнатура.
@@ -430,14 +430,14 @@ pnpm inspect:basic
 
 - **GitHub Releases** — каждое изменение, помеченное `BREAKING` или `feat`.
 - **`CHANGELOG.md`** (скоро) — полная история.
-- **`packages/nixo/README.md`** — актуальная документация, обновляется вместе с кодом.
+- **`packages/setti/README.md`** — актуальная документация, обновляется вместе с кодом.
 
-### Если вы уже используете nixo
+### Если вы уже используете setti
 
 - **Фиксируйте точную версию** — `pnpm add setti@0.1.0-alpha.3` (не `@alpha`).
-- **Читайте Release Notes** перед `pnpm update nixo`.
+- **Читайте Release Notes** перед `pnpm update setti`.
 - **Пишите обёртки** над публичным API — если сигнатура изменится, поправите в одном месте.
-- **Сообщайте о проблемах** — [Issues](https://github.com/your-username/nixo/issues) помогают стабилизировать API раньше.
+- **Сообщайте о проблемах** — [Issues](https://github.com/your-username/setti/issues) помогают стабилизировать API раньше.
 
 ---
 
