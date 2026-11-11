@@ -1,4 +1,4 @@
-import { Slice, TustenService } from '@tusten/core'
+import { Slice, Service } from '@tusten/core'
 import type { FactoryImplementation } from '@tusten/core'
 
 /** Данные для About. */
@@ -9,7 +9,7 @@ export interface AboutStatsState {
 }
 
 /** Сервис для System.Ping. */
-const systemService = new TustenService({ endpoint: 'System' })
+const systemService = new Service({ endpoint: 'System' })
 
 /** Слайс. */
 export class StatsSlice extends Slice<AboutStatsState> {}

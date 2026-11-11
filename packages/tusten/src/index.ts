@@ -60,9 +60,9 @@ export type {
     CrudOp,
     IBinding,
 } from './types'
-export { TustenRpcError } from './errors'
+export { RpcError } from './errors'
 export type { JsonRpcErrorPayload } from './errors'
-export { Service as TustenService } from './client/rpc/Service'
+export { Service } from './client/rpc/Service'
 
 // Prefetch (изоморфный).
 export { runGlobalPrefetch, runPagePrefetch, runPrefetch } from './shared/prefetch'
@@ -70,3 +70,5 @@ export type { PrefetchContext, PrefetchRegistry, PrefetchResult, PrefetchSliceIn
 export { RootErrorBoundary, RootLoading, RootNotFound } from './client/index'
 export type { RootErrorBoundaryProps } from './client/index'
 export { devalueParse, devalueStringify } from './client/index'
+export { resolveMeta } from './shared/meta-resolver'
+export type { MetaTag, MetaResult, MetaConfig, PageMeta } from './types'

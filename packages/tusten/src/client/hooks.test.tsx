@@ -14,6 +14,7 @@ import { useQuery } from './hooks/useQuery'
 import { useRouter } from './hooks/useRouter'
 import { Link } from './Link'
 import type { TustenClientRouter } from '../types'
+import { usePageMeta } from './hooks/usePageMeta'
 
 /** Тестовый слайс. */
 class CounterSlice extends Slice<number> {}
@@ -53,6 +54,9 @@ describe('React hooks', () => {
             back: vi.fn(),
             prefetch: vi.fn(async () => undefined),
         }
+        // jsdom: заглушить real navigation (иначе warning)
+        vi.spyOn(window.history, 'pushState').mockImplementation(() => {})
+        vi.spyOn(window.history, 'replaceState').mockImplementation(() => {})
     })
 
     afterEach(() => {
@@ -224,6 +228,51 @@ describe('React hooks', () => {
             expect(getByTestId('p').textContent).toBe('/a')
             rerender(<Test path="/b" />)
             expect(getByTestId('p').textContent).toBe('/b')
+        })
+    })
+
+    describe('usePageMeta', () => {
+        it('устанавливает title', () => {
+            function Comp() {
+                usePageMeta({ title: 'Custom' })
+                return null
+            }
+            render(<Comp />)
+            expect(document.title).toBe('Custom')
+        })
+
+        it('создаёт meta[name] если нет', () => {
+            function Comp() {
+                usePageMeta({ meta: [{ name: 'description', content: 'X' }] })
+                return null
+            }
+            render(<Comp />)
+            const el = document.querySelector<HTMLMetaElement>('meta[name="description"]')
+            expect(el?.content).toBe('X')
+        })
+
+        it('обновляет существующий meta', () => {
+            const existing = document.createElement('meta')
+            existing.name = 'description'
+            existing.content = 'old'
+            document.head.appendChild(existing)
+
+            function Comp() {
+                usePageMeta({ meta: [{ name: 'description', content: 'new' }] })
+                return null
+            }
+            render(<Comp />)
+            expect(document.querySelector<HTMLMetaElement>('meta[name="description"]')?.content).toBe('new')
+        })
+
+        it('рендерит microdata JSON-LD', () => {
+            function Comp() {
+                usePageMeta({ microdata: { '@type': 'Article' } })
+                return null
+            }
+            render(<Comp />)
+            const script = document.querySelector('script[type="application/ld+json"]')
+            expect(script?.textContent).toContain('"@type":"Article"')
         })
     })
 

@@ -8,8 +8,9 @@ export default defineRoute([
     {
         id: 'home',
         index: true,
-        title: 'Главная',
-        description: 'Демо-страница tusten',
+        metaConfig: {
+            title: 'Главная',
+        },
         type: 'main',
         middleware: [{ id: 'auth', handler: 'client/middleware/auth' }],
         contentConfig: {

@@ -37,7 +37,6 @@ function makeConfig(overrides: Partial<ResolvedTustenConfig> = {}): ResolvedTust
  */
 function makeRoute(partial: Partial<TustenRoute> & { id: string; type: string }): TustenRoute {
     return {
-        title: partial.id,
         contentConfig: {
             workspaceConfig: { template: `${partial.id}/view:View` },
             prefetchConfig: { configLoader: `${partial.id}/Factories/Root` },

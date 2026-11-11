@@ -10,8 +10,8 @@ import type { CompiledRoute, TustenRoute } from './types'
  */
 function makeRoute(partial: Partial<TustenRoute> & { id: string }): TustenRoute {
     return {
-        title: 'Test',
         type: 'main',
+        metaConfig: { title: 'Test' },
         contentConfig: {
             workspaceConfig: { template: 'x:y' },
             prefetchConfig: { configLoader: 'x:y' },

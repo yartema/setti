@@ -18,6 +18,8 @@ import type {
     RouteTree,
     RpcExecutor,
 } from '../types'
+import { resolveMeta } from '../shared/meta-resolver'
+import type { PageMeta } from '../types'
 
 /** Запись Vite client manifest (подмножество). */
 interface ViteClientManifestEntry {
@@ -66,6 +68,9 @@ export interface SSRHandlerOptions {
     RootNotFound: ComponentType
 }
 
+/** Дефолтная meta — используется как fallback для `<title>` и при ошибках. */
+const DEFAULT_PAGE_META: PageMeta = { title: 'Страница', meta: [], microdata: {} }
+
 /**
  * Создаёт обработчик SSR-запросов.
  *
@@ -74,9 +79,7 @@ export interface SSRHandlerOptions {
  *   - SPA (`config.ssr === false` / `route.ssr === false` / `?noSSR=true`):
  *     пустой каркас, `createRoot` на клиенте.
  *
- * `__ROOT_STATE_STR__` — JSON-строка от `devalue.stringify` (поддерживает
- * `Map`, `Set`, `Date`, `BigInt`, `undefined`, `NaN`, `Infinity`, cyclic).
- * На клиенте парсится через `devalue.parse`.
+ * `__ROOT_STATE_STR__` — JSON-строка от `devalue.stringify`.
  *
  * @param options опции.
  * @returns async-обработчик.
@@ -200,11 +203,14 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                     )
                 }
 
+                const notFoundMeta: PageMeta = { title: '404', meta: [], microdata: {} }
+
                 reply.raw.statusCode = 404
                 reply.raw.setHeader('Content-Type', 'text/html; charset=utf-8')
                 reply.raw.end(
-                    `<!DOCTYPE html><html><head><meta charset="utf-8"><title>404</title>${notFoundCss}${viteClientScript}</head>` +
-                        `<body><div id="root">${notFoundHtml}</div>` +
+                    buildHead(notFoundMeta, { cssLinksHtml: notFoundCss, viteClientScript }) +
+                        notFoundHtml +
+                        `</div>` +
                         `<script>window.__ROOT_SSR__=true</script>` +
                         middlewareScript +
                         `<script>window.__ROOT_STATE_STR__=""</script>` +
@@ -233,12 +239,19 @@ export function createSSRHandler(options: SSRHandlerOptions) {
 
             // ---- SPA ----
             if (!shouldSSR) {
+                // В SPA-режиме `readMethod`/`getMetaCallback` не вызываем:
+                // клиент подхватит meta через `usePageMeta`, если нужно.
+                const spaMeta: PageMeta = {
+                    title: route.metaConfig?.title ?? DEFAULT_PAGE_META.title,
+                    meta: route.metaConfig?.meta ?? [],
+                    microdata: route.metaConfig?.microdata ?? {},
+                }
+
                 reply.raw.statusCode = 200
                 reply.raw.setHeader('Content-Type', 'text/html; charset=utf-8')
                 reply.raw.end(
-                    `<!DOCTYPE html><html><head><meta charset="utf-8">` +
-                        `<title>${escapeHtml(route.title)}</title>${cssLinksHtml}${viteClientScript}</head>` +
-                        `<body><div id="root"></div>` +
+                    buildHead(spaMeta, { cssLinksHtml, viteClientScript }) +
+                        `</div>` +
                         ssrFlagScript +
                         middlewareScript +
                         `<script>window.__ROOT_STATE_STR__=""</script>` +
@@ -289,7 +302,11 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                 request: req,
             }
 
+            // Meta объявляется до `try`, чтобы `prefix` мог использовать её
+            // даже при ошибке в prefetch (fallback — заголовок «Страница»).
+            let pageMeta: PageMeta = { ...DEFAULT_PAGE_META, title: route.metaConfig?.title ?? DEFAULT_PAGE_META.title }
             let serializedStateJson = ''
+
             try {
                 const globalStates = await runGlobalPrefetch({
                     route,
@@ -312,16 +329,27 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                     return
                 }
 
-                const prefetchResult = await runPagePrefetch(
-                    {
-                        route,
-                        globalRegistry,
-                        loadModule,
-                        registry: sliceRegistry as never,
-                        router,
-                    },
-                    globalStates,
-                )
+                // Абсолютный URL для `readMethod` / `getMetaCallback`.
+                const origin = (req.headers['x-forwarded-proto'] as string | undefined) ?? req.protocol
+                const host = (req.headers['x-forwarded-host'] as string | undefined) ?? req.hostname
+                const fullUrl = `${origin}://${host}${req.url}`
+
+                const [prefetchResult, computedMeta] = await Promise.all([
+                    runPagePrefetch(
+                        {
+                            route,
+                            globalRegistry,
+                            loadModule,
+                            registry: sliceRegistry as never,
+                            router,
+                        },
+                        globalStates,
+                    ),
+                    resolveMeta(route, router, fullUrl, loadModule),
+                ])
+
+                // Присваиваем внешней переменной (не const, чтобы не затенить).
+                pageMeta = computedMeta
 
                 const serialized = await serializeState(prefetchResult.slices, projectDir, clientDir)
                 serializedStateJson = stringifyState(serialized)
@@ -344,7 +372,9 @@ export function createSSRHandler(options: SSRHandlerOptions) {
             let ErrorComponent: ComponentType<{ error: Error }> | undefined
             if (config.components.error) {
                 try {
-                    ErrorComponent = (await loadModule(config.components.error)) as ComponentType<{ error: Error }>
+                    ErrorComponent = (await loadModule(config.components.error)) as ComponentType<{
+                        error: Error
+                    }>
                 } catch (err) {
                     console.warn('[tusten] failed to load config.components.error, fallback to default:', err)
                 }
@@ -357,10 +387,7 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                 renderLayoutChain(child, Layouts),
             )
 
-            const prefix =
-                `<!DOCTYPE html><html><head><meta charset="utf-8">` +
-                `<title>${escapeHtml(route.title)}</title>${cssLinksHtml}${viteClientScript}</head>` +
-                `<body><div id="root">`
+            const prefix = buildHead(pageMeta, { cssLinksHtml, viteClientScript })
 
             const suffix =
                 `</div>` +
@@ -421,7 +448,7 @@ export function createSSRHandler(options: SSRHandlerOptions) {
             )
         }
 
-        // ALS-контекст (executor для SSR `TustenService.call`).
+        // ALS-контекст (executor для SSR `Service.call`).
         if (rpcExecutor) {
             const headers: Record<string, string> = {}
             for (const [k, v] of Object.entries(req.headers)) {
@@ -434,7 +461,7 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                     headers,
                     cookies,
                     executor: rpcExecutor,
-                    cache: new Map(), // per-request кэш TustenService
+                    cache: new Map(), // per-request кэш Service
                 },
                 runHandler,
             )
@@ -540,8 +567,6 @@ function resolveVitePath(projectDir: string, absPath: string): string {
  * Рекурсивно собирает `import '*.css'` из указанных файлов и их
  * JS/TS-импортов (только dev).
  *
- * Используется только в dev: prod-сборка отдаёт CSS через Vite manifest.
- *
  * @param sourceFiles абсолютные пути (без расширения или с).
  * @param projectDir корень проекта.
  * @returns Vite-пути до CSS.
@@ -616,6 +641,39 @@ function queryToObject(url: string): Record<string, string> {
         result[decodeURIComponent(k)] = decodeURIComponent(v)
     }
     return result
+}
+
+/**
+ * Собирает `<head>` с title, meta-тегами, JSON-LD, CSS и Vite-клиентом.
+ *
+ * Возвращает открытый `<div id="root">` в конце, чтобы вызывающий код
+ * мог стримить контент и закрыть `</div>` суффиксом.
+ *
+ * @param meta готовая meta страницы (title, meta[], microdata).
+ * @param opts опции.
+ * @param opts.cssLinksHtml готовая строка `<link rel="stylesheet">` для `<head>`.
+ * @param opts.viteClientScript `<script type="module">` Vite-клиента (только dev).
+ * @returns HTML: `<!DOCTYPE html>…</head><body><div id="root">`.
+ */
+function buildHead(meta: PageMeta, opts: { cssLinksHtml: string; viteClientScript: string }): string {
+    const tags = meta.meta
+        .map((m) => `<meta ${m.attribute ?? 'name'}="${escapeHtml(m.name)}" content="${escapeHtml(m.content)}">`)
+        .join('')
+
+    const micro =
+        Object.keys(meta.microdata).length > 0
+            ? `<script type="application/ld+json">${JSON.stringify(meta.microdata).replace(/</g, '\\u003c')}</script>`
+            : ''
+
+    return (
+        `<!DOCTYPE html><html><head><meta charset="utf-8">` +
+        `<title>${escapeHtml(meta.title)}</title>` +
+        tags +
+        micro +
+        opts.cssLinksHtml +
+        opts.viteClientScript +
+        `</head><body><div id="root">`
+    )
 }
 
 /**

@@ -46,7 +46,7 @@ function makeRegistry() {
 function makeRoute(deps: string[] = [], configLoader = 'Root:getConfig'): TustenRoute {
     return {
         id: 'home',
-        title: 'Home',
+        metaConfig: { title: 'Home' },
         type: 'main',
         index: true,
         contentConfig: {

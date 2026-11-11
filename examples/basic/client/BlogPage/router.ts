@@ -10,9 +10,12 @@ export default defineRoute([
     {
         id: 'blog',
         slug: [':id'],
-        title: 'Blog Post',
-        description: 'Пост блога',
         type: 'main',
+        metaConfig: {
+            readMethod: 'Blogs.ReadMetaInfo',
+            cache: 60_000,
+            meta: [{ name: 'og:type', content: 'article', attribute: 'property' }],
+        },
         contentConfig: {
             workspaceConfig: {
                 template: 'BlogPage/view:View',

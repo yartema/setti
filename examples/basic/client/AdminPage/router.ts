@@ -9,8 +9,9 @@ export default defineRoute([
     {
         id: 'admin',
         parentId: 'home',
-        title: 'Admin',
-        description: 'Админ-панель',
+        metaConfig: {
+            title: 'Admin Page',
+        },
         type: 'admin',
         ssr: false,
         contentConfig: {

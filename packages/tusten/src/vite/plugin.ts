@@ -94,12 +94,13 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
         return {
             id,
             path: urlPath,
-            title: route.title,
-            description: route.description ?? null,
+            title: route.metaConfig?.title ?? 'Страница',
+            description: route.metaConfig?.meta?.find((m) => m.name === 'description')?.content ?? null,
             templatePath,
             templateExport,
             middleware: route.middleware ?? [],
             meta: route.meta ?? {},
+            metaConfig: route.metaConfig ?? null,
             contentConfig: route.contentConfig,
             layoutChain: routeTree.layoutChains.get(id) ?? [],
         }
@@ -133,6 +134,14 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
     for (const def of Object.values(globalFactories)) {
         addSpec(def.dataFactoryName)
     }
+
+    // getMetaCallback — должен быть доступен в клиентском bundle
+    for (const route of routeTree.byId.values()) {
+        if (route.metaConfig?.getMetaCallback) {
+            addSpec(route.metaConfig.getMetaCallback)
+        }
+    }
+
     // Компоненты (error / loading / notFound) — в client bundle.
     for (const key of ['error', 'loading', 'notFound'] as const) {
         const spec = config.components[key]
@@ -147,10 +156,20 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
         if (layoutRel) allSsrSpecs.add(layoutRel)
         allSsrSpecs.add(route.contentConfig.prefetchConfig.configLoader)
     }
+
     for (const spec of factoryModules) allSsrSpecs.add(spec)
+
     for (const def of Object.values(globalFactories)) {
         allSsrSpecs.add(def.dataFactoryName)
     }
+
+    // getMetaCallback (SSR)
+    for (const route of routeTree.byId.values()) {
+        if (route.metaConfig?.getMetaCallback) {
+            allSsrSpecs.add(route.metaConfig.getMetaCallback)
+        }
+    }
+
     // Компоненты (error / loading / notFound) — в SSR bundle.
     for (const key of ['error', 'loading', 'notFound'] as const) {
         const spec = config.components[key]
@@ -233,6 +252,7 @@ interface RouteEntry {
     templateExport: string
     middleware: MiddlewareDef[]
     meta: Record<string, unknown>
+    metaConfig: import('../types').MetaConfig | null
     contentConfig: TustenRoute['contentConfig']
     layoutChain: string[]
 }
@@ -441,6 +461,7 @@ function generateEntryModule(cssMain?: string): string {
 ${cssImport}
 import { createElement } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
+import { resolveMeta } from '@tusten/core'
 import {
   RootProvider,
   RootErrorBoundary,
@@ -641,6 +662,14 @@ async function main() {
     }
 
     const newTree = await renderTree(to.route)
+
+    const meta = await resolveMeta(
+      to.route,
+      { id: to.route.id, path: to.pathname, params: to.params, query: to.query, request: null },
+      window.location.href,
+      resolveModule,
+    )
+    document.title = meta.title
 
     if (mode === 'replace') {
       window.history.replaceState({}, '', path)

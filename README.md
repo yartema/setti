@@ -12,7 +12,7 @@
 
 **tusten** — мета-фреймворк уровня Nuxt/Next, который собирается из трёх проверенных инструментов: React, Fastify, Vite. Устанавливается как зависимость, сканирует `client/`, строит карту маршрутов, поднимает сервер с SSR/SPA и JSON-RPC 2.0 — без магии, без RSC, без Server Actions.
 
-> ⚠️ **Beta (`@tusten/core@0.2.0-beta.1`).**
+> ⚠️ **Beta (`@tusten/core@0.2.0-beta.4`).**
 >
 > - Установка: `pnpm add @tusten/core@beta`
 > - Импорт: `import { defineConfig } from '@tusten/core'`
@@ -29,15 +29,16 @@
 - **SPA по требованию** — глобально (`ssr: false`), per-route (`route.ssr: false`) или через `?noSSR=true` для отладки.
 - **Файловый роутинг** — `client/*/router.ts` → `defineRoute([...])`. Динамические сегменты через `slug: ['/regex:[a-z0-9-]+']` или `path: '/blog/:slug'`.
 - **Вложенные layouts** — по `parentId`, рендер цепочкой `root → admin → page`. `<Outlet/>` или `props.children` на выбор.
+- **SEO / meta** — `metaConfig` на маршруте: статика (`title`, `meta[]`, `microdata`) + динамика через `readMethod` (JSON-RPC) или `getMetaCallback`. Плюс `usePageMeta` для компонента. JSON-LD из коробки.
 - **JSON-RPC 2.0 из коробки** — `defineObject` в `server/**/*.meta.ts`, endpoint `/service`, batch, валидация через Standard Schema (valibot / zod / arktype), auth, `ctx.call`, `System.Describe`.
 - **Три реестра middleware** — client-page, server-page, server-api. Не смешиваются, наследуются по `parentId`.
 - **Слайсы** — собственный реактивный store (`Slice` / `AbstractSlice` / `SliceRegistry`). Page-scoped и global, авто `disposePage()` при навигации, `useSlice` / `useStrictSlice` / `useSliceRef`.
-- **Cross-page кэш в `Service`** — TTL, `invalidate()`, `<Link prefetch>` заполняет кэш по hover. Не на уровне страниц — на уровне вызовов.
+- **Cross-page кэш в `Service`** — TTL, `invalidate()`, LRU-эвикция (`cacheMaxEntries`, default 500), `<Link prefetch>` заполняет кэш по hover. Не на уровне страниц — на уровне вызовов.
 - **`devalue` для сериализации** — `Map`, `Set`, `Date`, `BigInt`, `undefined`, `NaN`, циклы переживают SSR и восстанавливаются на клиенте.
 - **Client-safe разделение** — три точки входа: `@tusten/core` (pure TS), `@tusten/core/server` (Node-only), `@tusten/core/client` (React). `@tusten/core` не тянет jiti/fastify/vite.
 - **Error boundaries / Loading / Not Found** — через `config.components`, с дефолтами `RootErrorBoundary` / `RootLoading` / `RootNotFound`.
 - **Prod build** — `tusten build` → `dist/client` + `dist/server`. `tusten start` — Fastify + статика.
-- **264 unit-теста** (Vitest) — ядро покрыто на 90%+, CI на GitHub Actions.
+- **269 unit-тестов** (Vitest) — ядро покрыто на 90%+, CI на GitHub Actions.
 
 ---
 
@@ -80,14 +81,14 @@ pnpm install
 pnpm dev:basic
 ```
 
-Откройте **http://localhost:3000** — демо на Tailwind v4 с 4 страницами (Home / About / Blog / Admin), API, JSON-RPC и вложенными layouts.
+Откройте **http://localhost:3000** — демо на Tailwind v4 с 4 страницами (Home / About / Blog / Admin), API, JSON-RPC, meta и вложенными layouts.
 
 **Другие команды:**
 
 ```bash
 pnpm lint                                        # ESLint
 pnpm typecheck                                   # tsc --noEmit
-pnpm test                                        # Vitest (264 теста)
+pnpm test                                        # Vitest (269 тестов)
 pnpm inspect:basic                               # dump маршрутов и RPC-методов
 pnpm build:basic                                 # prod-сборка
 pnpm start:basic                                 # prod-сервер
@@ -107,9 +108,12 @@ export default defineRoute([
     {
         id: 'home',
         index: true, // URL: /
-        title: 'Главная',
         type: 'main', // layout из config.layouts
         middleware: [{ id: 'auth', handler: 'client/middleware/auth' }],
+        metaConfig: {
+            title: 'Главная',
+            meta: [{ name: 'description', content: 'Home page' }],
+        },
         contentConfig: {
             workspaceConfig: { template: 'HomePage/view:View' },
             prefetchConfig: {
@@ -120,6 +124,95 @@ export default defineRoute([
     },
 ])
 ```
+
+**Динамический маршрут с meta из RPC:**
+
+```ts
+// client/BlogPage/router.ts
+export default defineRoute([
+    {
+        id: 'blog',
+        slug: ['/regex:[a-z0-9-]+'],
+        type: 'main',
+        metaConfig: {
+            readMethod: 'Blogs.ReadMetaInfo', // вернёт { title, meta[], microdata }
+            cache: 60_000,
+            meta: [
+                // статика мержится: [...static, ...fromMethod]
+                { name: 'og:type', content: 'article', attribute: 'property' },
+            ],
+        },
+        contentConfig: {/* ... */},
+    },
+])
+```
+
+### SEO / meta
+
+Три уровня (по убыванию приоритета):
+
+1. **`readMethod`** — путь до JSON-RPC метода (`'Blogs.ReadMetaInfo'`). Вызывается с полным URL. Возвращает `{ title?, meta?: MetaTag[], microdata?: object }`.
+2. **`getMetaCallback`** — путь до функции `(metaConfig) => Promise<MetaResult>`. Вызывается, если `readMethod` не задан.
+3. **Статика** в `metaConfig`: `title`, `meta: MetaTag[]`, `microdata`.
+
+**Мерж статики и метода:**
+
+- `meta` — конкатенация: `[...static, ...fromMethod]` (статика первая).
+- `microdata` — shallow merge: `{ ...static, ...fromMethod }`.
+- `title` — приоритет: `fromMethod.title` > `metaConfig.title` > `'Страница'`.
+
+`MetaTag = { name: string; content: string; attribute?: 'name' | 'property' }` — для OG/Twitter указывайте `attribute: 'property'`.
+
+**Серверный handler `readMethod`:**
+
+```ts
+// server/blogs/Blogs.meta.ts
+import { defineObject } from '@tusten/core/server'
+import * as v from 'valibot'
+
+export default defineObject({
+    name: 'Blogs',
+    description: 'Блог',
+    methods: {
+        ReadMetaInfo: {
+            description: 'Возвращает meta для поста',
+            params: v.string(), // url
+            handler: async (url) => {
+                const slug = new URL(url).pathname.split('/').pop() ?? 'unknown'
+                return {
+                    title: `Post ${slug} — Blog`,
+                    meta: [
+                        { name: 'description', content: `Post ${slug}` },
+                        { name: 'og:title', content: `Post ${slug}`, attribute: 'property' as const },
+                    ],
+                    microdata: {
+                        '@context': 'https://schema.org',
+                        '@type': 'BlogPosting',
+                        headline: `Post ${slug}`,
+                    },
+                }
+            },
+        },
+    },
+})
+```
+
+**Клиентский `usePageMeta` (client-only, для динамики внутри компонента):**
+
+```tsx
+import { usePageMeta } from '@tusten/core/client'
+
+export function View() {
+    usePageMeta({
+        title: 'Custom title',
+        meta: [{ name: 'description', content: '...' }],
+        microdata: { '@type': 'Article' },
+    })
+    return <div>...</div>
+}
+```
+
+SSR — no-op (meta из `metaConfig` уже в `<head>`).
 
 ### Prefetch фабрик
 
@@ -157,7 +250,8 @@ interface UserListState {
 const usersService = new Service({
     endpoint: 'Users',
     binding: { query: 'List' },
-    cache: 30_000, // cross-page кэш на 30 сек
+    cache: 30_000, // TTL
+    cacheMaxEntries: 500, // LRU limit (default 500)
 })
 
 export class UserListSlice extends Slice<UserListState> {
@@ -278,6 +372,7 @@ export default defineConfig({
 │  client/*/router.ts ──► defineRoute([...])             │
 │  client/*/Factories ──► getConfig → Service            │
 │  client/*/view.tsx ───► useSlice / useRouter / <Link>  │
+│                         usePageMeta                    │
 │                                                        │
 └─────────────────┬──────────────────────────────────────┘
                   │ HTTP / WebSocket
@@ -287,7 +382,7 @@ export default defineConfig({
 │  POST /service        ← JSON-RPC 2.0 (defineObject)    │
 │  GET  /stomp          ← WebSocket (в планах)          │
 │  GET  /api/*          ← defineServerRoutes            │
-│  GET  /*              ← SSR / SPA HTML                │
+│  GET  /*              ← SSR / SPA HTML + meta         │
 │                                                        │
 │  ── при SSR: Service.call идёт через ALS executor ──   │
 │     (прямой вызов handler'а из реестра, без HTTP)      │
@@ -299,10 +394,11 @@ export default defineConfig({
 
 - **`loadData` изоморфный** — работает на сервере и клиенте, только `fetch('/api/...')` или `Service.call(...)`. Никаких прямых обращений к БД, никаких Server Actions.
 - **JSON-RPC для чтения и мутаций** — единый протокол, типизация через Standard Schema, `ctx.call` для композиции методов.
+- **`metaConfig` + `resolveMeta`** — meta резолвится **параллельно** с prefetch (`Promise.all`), поэтому SSR latency = max(prefetch, meta), не сумма.
 - **`ctx.stomp.message(key, payload)`** — real-time push (в разработке).
 - **Три реестра middleware** — не смешиваются, каждый со своим контекстом.
 - **`@tusten/core` / `@tusten/core/server` / `@tusten/core/client`** — client-safe разделение, `@tusten/core` не тянет Node.
-- **264 unit-теста** (Vitest) — ядро покрыто на 90%+.
+- **269 unit-тестов** (Vitest) — ядро покрыто на 90%+.
 
 ---
 
@@ -316,7 +412,7 @@ tusten-framework/
 │       │   ├── index.ts         # @tusten/core (client-safe)
 │       │   ├── server.ts        # @tusten/core/server (Node-only)
 │       │   ├── client/          # @tusten/core/client (React)
-│       │   ├── shared/          # prefetch (изоморфный)
+│       │   ├── shared/          # prefetch + meta-resolver (изоморфный)
 │       │   ├── server/          # Fastify, SSR, RPC, STOMP (wip)
 │       │   ├── build/           # build pipeline
 │       │   └── vite/            # Vite-плагин (virtual modules)
@@ -342,8 +438,9 @@ tusten-framework/
 - **Phase 1** — SSR, SPA, prod build, CSS (Tailwind / per-component), enriched `_initState`
 - **Phase 2** — `defineServerRoutes`, `defineServerPlugins`, 3 реестра middleware, `useRouter` / `<Link>`, JSON-RPC 2.0 (`/service`), `Service` с ALS executor
 - **Phase 3** — динамические сегменты (`slug` / `path`), вложенные layouts по `parentId`, per-route `ssr: false`, error boundaries / loading / notFound
-- **Phase 4** — `System.Describe`, рекурсивный CSS-scan, `devalue` (`Map` / `Date` / cyclic), cross-page кэш в `Service`
-- **Phase 5** — 264 unit-теста (Vitest), GitHub Actions CI (`format:check` + `lint` + `typecheck` + `test`), Prettier + ESLint, публикация `@tusten/core@0.2.0-beta.1` в npm
+- **Phase 4** — `System.Describe`, рекурсивный CSS-scan, `devalue` (`Map` / `Date` / cyclic), cross-page кэш в `Service` (LRU, `cacheMaxEntries`)
+- **Phase 5** — 269 unit-тестов (Vitest), GitHub Actions CI (`format:check` + `lint` + `typecheck` + `test`), Prettier + ESLint, публикация `@tusten/core@0.2.0-beta.4` в npm
+- **Phase 6** — SEO / meta: `metaConfig` (статика), `readMethod` (JSON-RPC), `getMetaCallback` (функция), `usePageMeta` (client), `microdata` (JSON-LD), `resolveMeta` (SSR, параллельно с prefetch)
 
 ### 🚧 В разработке
 
@@ -360,7 +457,8 @@ tusten-framework/
 - `@fastify/rate-limit` на `/service` + CSRF-защита
 - Мемоизация `useParams` / `useQuery`
 - `<Link prefetch>` — `onTouchStart` для мобильных
-- `<Head>` компонент (meta-теги, SEO)
+- `<link rel="canonical">` и `alternates` в `metaConfig`
+- Множественные `<meta>` с одинаковым `name` (Open Graph galleries)
 
 ### ❌ Не планируется
 
@@ -420,6 +518,8 @@ pnpm publish:latest
 - Всё, что `create-server.ts` передаёт в Vite-плагин, должен передавать и `build-client.ts` / `build-server.ts` (иначе dev ≠ prod).
 - Windows: `import(absolutePath)` требует `pathToFileURL()` — иначе `ERR_UNSUPPORTED_ESM_URL_SCHEME`.
 - Тесты: мутации слайса (`slice.setState`, `registry.setPage`) после `render()` — только в `act()`.
+- `resolveMeta` резолвится **параллельно** с `runPagePrefetch` (`Promise.all`) — не переделывать в sequential, это удвоит SSR latency.
+- `getMetaCallback`-пути должны быть добавлены в `specToPath`/`allSsrSpecs` в Vite-плагине, иначе `resolveModule` их не найдёт.
 
 ---
 
@@ -451,19 +551,21 @@ pnpm publish:latest
 
 ### Что может измениться без предупреждения
 
-- **Публичный API** — сигнатуры `defineRoute`, `defineGlobalLoader`, `defineObject`, `Service`, `Slice`, хуков (`useSlice`, `useRouter`, `useStomp`, ...).
+- **Публичный API** — сигнатуры `defineRoute`, `defineGlobalLoader`, `defineObject`, `Service`, `Slice`, хуков (`useSlice`, `useRouter`, `usePageMeta`, `useStomp`, ...).
 - **Формат конфига** (`tusten.config.ts`) — поля могут переименовываться, получать новые опции, менять дефолты.
-- **Схема маршрута** (`TustenRoute`) — `path`, `slug`, `ssr`, `middleware`, `contentConfig` и т.д.
+- **Схема маршрута** (`TustenRoute`) — `path`, `slug`, `ssr`, `middleware`, `metaConfig`, `contentConfig` и т.д.
 - **JSON-RPC** — wire-протокол, формат `System.Describe`, коды ошибок.
+- **Meta**: `MetaTag`, `MetaResult`, `MetaConfig`, `PageMeta` — форма может расширяться.
 - **Внутренние детали**, которые просачиваются наружу: `__ROOT_STATE_STR__`, `__ROOT_MIDDLEWARE__`, `virtual:tusten/*`, `dist/server/entry.js`.
-- **Поведение** — например, дефолтный `cache` в `Service` может стать `30_000` вместо `0`.
+- **Поведение** — например, дефолтный `cacheMaxEntries` в `Service` может измениться.
 
 ### Что стабилизируется раньше
 
 - **`defineConfig`** — базовая структура (`ssr`, `clientDir`, `serverDir`, `layouts`, `css`) вряд ли изменится.
-- **`defineRoute`** — структура маршрута (id, parentId, title, type) — фундаментальная.
+- **`defineRoute`** — структура маршрута (id, parentId, type, metaConfig) — фундаментальная.
 - **`Slice` / `AbstractSlice`** — `hydrate`, `getState`, `setState`, `subscribe` — ядро реактивности.
 - **`loadData(args, deps, ctx)`** — сигнатура.
+- **`MetaTag`** — `{ name, content, attribute? }`.
 
 ### Философия версионирования
 
@@ -481,7 +583,7 @@ pnpm publish:latest
 ### Если вы уже используете tusten
 
 - **Читайте Release Notes** перед `pnpm update @tusten/core`.
-- **Фиксируйте точную версию** в проде — `pnpm add @tusten/core@0.2.0-beta.1` (не `@beta`).
+- **Фиксируйте точную версию** в проде — `pnpm add @tusten/core@0.2.0-beta.4` (не `@beta`).
 - **Пишите обёртки** над публичным API — если сигнатура изменится, поправите в одном месте.
 - **Сообщайте о проблемах** — [Issues](https://github.com/yartema/tusten-framework/issues) помогают стабилизировать API раньше.
 

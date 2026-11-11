@@ -96,11 +96,11 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
             configFile: false,
             ssr: {
                 ...(userVite.ssr ?? {}),
-                noExternal: ['tusten', ...((userVite.ssr?.noExternal as string[]) ?? [])],
+                noExternal: ['@tusten/core', ...((userVite.ssr?.noExternal as string[]) ?? [])],
             },
             optimizeDeps: {
                 ...(userVite.optimizeDeps ?? {}),
-                exclude: ['tusten', ...((userVite.optimizeDeps?.exclude as string[]) ?? [])],
+                exclude: ['@tusten/core', ...((userVite.optimizeDeps?.exclude as string[]) ?? [])],
             },
             plugins: [
                 tustenPlugin({
@@ -131,8 +131,8 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
         })
 
         // Vite резолвит `tusten/client` через `exports` пакета → dist/client/index.js.
-        // `noExternal: ['tusten']` заставляет Vite трансформировать, а не externalize.
-        const tustenClient = (await vite.ssrLoadModule('tusten/client')) as {
+        // `noExternal: ['@tusten/core']` заставляет Vite трансформировать, а не externalize.
+        const tustenClient = (await vite.ssrLoadModule('@tusten/core/client')) as {
             RootProvider: typeof RootProvider
             SliceRegistry: typeof SliceRegistry
             renderLayoutChain: typeof renderLayoutChain

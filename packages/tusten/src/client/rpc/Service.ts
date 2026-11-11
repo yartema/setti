@@ -1,6 +1,6 @@
 import { Remote } from './Remote'
 import { isServer, getServerExecutor, getCurrentHeaders, getServerCache } from './server-bridge'
-import { JsonRpcErrorPayload, TustenRpcError } from '../../errors'
+import { JsonRpcErrorPayload, RpcError } from '../../errors'
 import { stringify as devalueStringify } from 'devalue'
 import type { ServiceOptions, CallOptions, ServiceCacheEntry } from '../../types'
 
@@ -12,23 +12,60 @@ interface JsonRpcResponse<R> {
     id: string | number | null
 }
 
+/** Максимум записей в клиентском кэше (если не задан `cacheMaxEntries`). */
+const DEFAULT_CACHE_MAX = 500
+
 /**
  * Модульный кэш на клиенте. Один на всё приложение — кросс-страничный,
- * кросс-инстансный. На сервере используется ALS (per-request).
+ * кросс-инстансный. Ограничен LRU (см. `DEFAULT_CACHE_MAX`).
+ *
+ * На сервере (SSR) используется ALS-кэш (`getServerCache()`), per-request,
+ * без LRU — он умирает вместе с запросом.
  */
 const clientServiceCache = new Map<string, ServiceCacheEntry>()
 
 /**
- * Изоморфный JSON-RPC 2.0 клиент с кэшем.
+ * Помечает ключ как «только что использованный» — перемещает в конец Map,
+ * чтобы LRU-эвикция удаляла старые первыми.
  *
- * - Клиент: `fetch(url, { method: 'POST', body })` + кэш в модульном `Map`.
- * - Сервер (SSR): executor из ALS + кэш в ALS (per-request).
+ * @param key ключ.
+ */
+function touchClientCache(key: string): void {
+    const entry = clientServiceCache.get(key)
+    if (!entry) return
+    clientServiceCache.delete(key)
+    clientServiceCache.set(key, entry)
+}
+
+/**
+ * Удаляет старые записи, пока размер не уложится в `max`.
+ * Вызывается только на клиенте (серверный кэш — per-request).
  *
- * Кэш:
- *   - Включается через `new TustenService({ ..., cache: 30000 })`.
- *   - Per-call override: `service.call(method, params, { cache: 60000 })`.
- *   - `cache: false` в опциях вызова — не кэшировать.
- *   - Инвалидация: `service.invalidate()` / `invalidate(method)` / `invalidate(method, params)` / `TustenService.invalidateAll()`.
+ * @param max максимум записей.
+ */
+function evictClientCache(max: number): void {
+    while (clientServiceCache.size > max) {
+        const first = clientServiceCache.keys().next()
+        if (first.done) break
+        clientServiceCache.delete(first.value)
+    }
+}
+
+/**
+ * Изоморфный JSON-RPC 2.0 клиент с LRU-кэшем.
+ *
+ * - Клиент: `fetch` + кэш в модульном `Map` (LRU, `cacheMaxEntries`).
+ * - Сервер (SSR): executor из ALS + per-request кэш (без LRU).
+ *
+ * @example
+ * ```ts
+ * const users = new Service({
+ *   endpoint: 'Users',
+ *   binding: { query: 'List' },
+ *   cache: 30_000,
+ * })
+ * const list = await users.query({ limit: 10 })
+ * ```
  */
 export class Service<T extends Record<string, unknown> = Record<string, unknown>> extends Remote<T> {
     private _serviceOpts: ServiceOptions
@@ -90,7 +127,7 @@ export class Service<T extends Record<string, unknown> = Record<string, unknown>
      * @param params параметры.
      * @param opts per-call опции (`{ cache }`).
      * @returns `result`.
-     * @throws {TustenRpcError} при `error` в ответе.
+     * @throws {RpcError} при `error` в ответе.
      */
     async call<R = unknown>(method: string, params?: unknown, opts?: CallOptions): Promise<R> {
         const cacheTtl = opts?.cache !== undefined ? opts.cache : this._serviceOpts.cache
@@ -101,6 +138,8 @@ export class Service<T extends Record<string, unknown> = Record<string, unknown>
         if (store && cacheKey) {
             const cached = store.get(cacheKey)
             if (cached && cached.expiresAt > Date.now()) {
+                // LRU: только для клиентского кэша
+                if (!isServer()) touchClientCache(cacheKey)
                 return cached.value as R
             }
             if (cached) store.delete(cacheKey)
@@ -108,7 +147,7 @@ export class Service<T extends Record<string, unknown> = Record<string, unknown>
 
         const res = await this.callRaw(method, params)
         const data = (await res.json()) as JsonRpcResponse<R>
-        if (data.error) throw new TustenRpcError(data.error)
+        if (data.error) throw new RpcError(data.error)
         const result = data.result as R
 
         if (store && cacheKey && typeof cacheTtl === 'number') {
@@ -116,6 +155,10 @@ export class Service<T extends Record<string, unknown> = Record<string, unknown>
                 value: result,
                 expiresAt: Date.now() + cacheTtl,
             })
+            // LRU-эвикция — только на клиенте
+            if (!isServer()) {
+                evictClientCache(this._serviceOpts.cacheMaxEntries ?? DEFAULT_CACHE_MAX)
+            }
         }
 
         return result
@@ -157,64 +200,72 @@ export class Service<T extends Record<string, unknown> = Record<string, unknown>
     }
 
     /**
-     * Очищает **всё** клиентский кэш (кросс-инстанс).
-     *
-     * На сервере — no-op (per-request кэш в ALS всё равно уничтожится).
+     * Очищает **всё** клиентское кэш-хранилище (кросс-инстанс).
+     * На сервере — no-op (ALS-кэш умирает вместе с запросом).
      */
     static invalidateAll(): void {
         clientServiceCache.clear()
     }
 
     /**
-     * CRUD: query (`List` по дефолту).
+     * Текущий размер клиентского кэша (для тестов / отладки).
      *
-     * @param params параметры.
-     * @param opts per-call опции.
-     * @returns `result`.
+     * @returns количество записей.
+     */
+    static cacheSize(): number {
+        return clientServiceCache.size
+    }
+
+    /**
+     * CRUD: query (`List` по дефолту, `binding.query` переопределяет).
+     *
+     * @param params параметры запроса.
+     * @param opts per-call опции (`{ cache }`).
+     * @returns `result` из JSON-RPC ответа.
      */
     async query<P = unknown, R = unknown>(params?: P, opts?: CallOptions): Promise<R> {
         return this.call<R>(this.resolveMethod('query'), params, opts)
     }
 
     /**
-     * CRUD: read (`Read` по дефолту).
+     * CRUD: read (`Read` по дефолту, `binding.read` переопределяет).
      *
-     * @param params параметры.
-     * @param opts per-call опции.
-     * @returns `result`.
+     * @param params параметры (обычно `{ id }`).
+     * @param opts per-call опции (`{ cache }`).
+     * @returns `result` из JSON-RPC ответа.
      */
     async read<P = unknown, R = unknown>(params?: P, opts?: CallOptions): Promise<R> {
         return this.call<R>(this.resolveMethod('read'), params, opts)
     }
 
     /**
-     * CRUD: create (`Create` по дефолту).
+     * CRUD: create (`Create` по дефолту, `binding.create` переопределяет).
      *
-     * @param params параметры.
-     * @param opts per-call опции.
-     * @returns `result`.
+     * @param params данные новой записи.
+     * @param opts per-call опции (`{ cache }`).
+     * @returns `result` из JSON-RPC ответа.
      */
     async create<P = unknown, R = unknown>(params?: P, opts?: CallOptions): Promise<R> {
         return this.call<R>(this.resolveMethod('create'), params, opts)
     }
 
     /**
-     * CRUD: update (`Update` по дефолту).
+     * CRUD: update (`Update` по дефолту, `binding.update` переопределяет).
      *
-     * @param params параметры.
-     * @param opts per-call опции.
-     * @returns `result`.
+     * @param params данные для обновления (обычно `{ id, ... }`).
+     * @param opts per-call опции (`{ cache }`).
+     * @returns `result` из JSON-RPC ответа.
      */
     async update<P = unknown, R = unknown>(params?: P, opts?: CallOptions): Promise<R> {
         return this.call<R>(this.resolveMethod('update'), params, opts)
     }
 
     /**
-     * CRUD: destroy (`Delete` по дефолту).
+     * CRUD: destroy (`Delete` по дефолту, `binding.destroy` переопределяет).
      *
-     * @param params параметры.
-     * @param opts per-call опции.
-     * @returns `result`.
+     * @param params параметры (обычно `{ id }`).
+     * @param opts per-call опции (`{ cache }`).
+     * @returns `result` из JSON-RPC ответа.
      */
     async destroy<P = unknown, R = unknown>(params?: P, opts?: CallOptions): Promise<R> {
         return this.call<R>(this.resolveMethod('destroy'), params, opts)
@@ -236,16 +287,12 @@ export class Service<T extends Record<string, unknown> = Record<string, unknown>
      */
     protected prepareHeaders(): Record<string, string> {
         const base: Record<string, string> = { 'content-type': 'application/json' }
-        if (isServer()) {
-            Object.assign(base, getCurrentHeaders())
-        }
+        if (isServer()) Object.assign(base, getCurrentHeaders())
         return base
     }
 
     /**
-     * Изоморфный execute:
-     *   - SSR + executor → прямой вызов (без HTTP);
-     *   - иначе → fetch.
+     * Изоморфный execute.
      *
      * @param payload JSON-RPC payload.
      * @returns `Response`.

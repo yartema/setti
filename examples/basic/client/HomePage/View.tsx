@@ -1,9 +1,9 @@
 import { useState, type JSX, type ReactNode } from 'react'
 import { Button } from '../shared/Button'
-import { useSlice, useStrictSlice, usePathname, useRouter, Link } from '@tusten/core/client'
+import { useSlice, useStrictSlice, usePathname, useRouter, Link, usePageMeta } from '@tusten/core/client'
 import type { UserListSlice } from './Factories/usersList'
 import type { UserInfoSlice } from '../User/loaders/userInfo'
-import { TustenService } from '@tusten/core'
+import { Service } from '@tusten/core'
 import { usersService } from './Factories/usersList'
 
 /**
@@ -20,6 +20,9 @@ import { usersService } from './Factories/usersList'
 export function View(): JSX.Element {
     const user = useStrictSlice<UserInfoSlice>('userInfo')
     const userState = user.getState()
+    usePageMeta({
+        meta: [{ name: 'description', content: 'Home page of tusten demo' }],
+    })
 
     const list = useSlice<UserListSlice>('UserList')
     const listState = list?.getState()
@@ -133,7 +136,7 @@ export function View(): JSX.Element {
                         </button>
                         <button
                             onClick={() => {
-                                TustenService.invalidateAll()
+                                Service.invalidateAll()
                                 setApiResult('all cache invalidated')
                             }}
                             className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"

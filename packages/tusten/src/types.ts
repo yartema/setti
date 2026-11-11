@@ -237,6 +237,39 @@ export interface FactoryImplementation<TState = unknown> {
     getDataFactoryArguments?: () => Promise<Record<string, unknown>>
 }
 
+/** Один мета-тег. */
+export interface MetaTag {
+    name: string
+    content: string
+    /** HTML-атрибут: `name` (дефолт) или `property` (Open Graph, Twitter). */
+    attribute?: 'name' | 'property'
+}
+
+/** Возврат `readMethod` / `getMetaCallback`. */
+export interface MetaResult {
+    /** Динамический `<title>`. Переопределяет `metaConfig.title`. */
+    title?: string
+    meta?: MetaTag[]
+    microdata?: Record<string, unknown>
+}
+
+/** Конфиг meta для маршрута. */
+export interface MetaConfig {
+    readMethod?: string
+    getMetaCallback?: string
+    cache?: number
+    title?: string
+    meta?: MetaTag[]
+    microdata?: Record<string, unknown>
+}
+
+/** Готовая meta для рендера. */
+export interface PageMeta {
+    title: string
+    meta: MetaTag[]
+    microdata: Record<string, unknown>
+}
+
 /**
  * Один маршрут, возвращаемый из `router.ts` через `defineRoute([...])`.
  */
@@ -245,10 +278,6 @@ export interface TustenRoute {
     id: string
     /** Идентификатор родителя (для иерархии URL). */
     parentId?: string
-    /** Заголовок страницы. */
-    title: string
-    /** Необязательное описание. */
-    description?: string
     /** Ключ layout'а из `config.layouts`. */
     type: string
     /**
@@ -257,6 +286,8 @@ export interface TustenRoute {
      */
     index?: boolean
     /** Конфигурация контента: шаблон и prefetch-пайплайн. */
+    /** Конфиг meta для маршрута. SEO */
+    metaConfig?: MetaConfig
     contentConfig: {
         workspaceConfig: {
             /** Путь до компонента (`<file>:<export>` или `<file>`). */
@@ -273,7 +304,7 @@ export interface TustenRoute {
             dependencies?: string[]
         }
     }
-    /** Свободные пользовательские данные (расширяемость). */
+    /** Произвольные пользовательские данные (не SEO). */
     meta?: Record<string, unknown>
     /**
      * Middleware для страницы. Client — `client/middleware/*.ts`,
@@ -493,7 +524,7 @@ export interface RpcObjectDefinition {
  * Контекст, передаваемый в `RpcMethodDefinition.handler`.
  *
  * Расширяется прикладником через `config.rpc.extendContext` +
- * module augmentation (`declare module 'tusten/server' { interface RpcContext {...} }`).
+ * module augmentation (`declare module '@tusten/core/server' { interface RpcContext {...} }`).
  */
 export interface RpcContext {
     /** ID запроса (из `X-Request-Id` или сгенерирован tusten). */
@@ -567,6 +598,11 @@ export interface ServiceOptions {
      * Per-call override — `call(method, params, { cache })`.
      */
     cache?: number
+    /**
+     * Максимум записей в клиентском кэше (LRU-эвикция).
+     * По умолчанию 500. На сервере (per-request) не применяется.
+     */
+    cacheMaxEntries?: number
 }
 
 /** Запись в кэше `TustenService`. */

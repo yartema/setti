@@ -23,7 +23,7 @@ export interface JsonRpcErrorPayload {
 /**
  * Ошибка JSON-RPC. Бросается `Service.call` при `error` в ответе.
  */
-export class TustenRpcError extends TustenError {
+export class RpcError extends TustenError {
     /** Оригинальный JSON-RPC error. */
     readonly rpcError: JsonRpcErrorPayload
 
@@ -33,7 +33,7 @@ export class TustenRpcError extends TustenError {
     constructor(rpcError: JsonRpcErrorPayload) {
         const detail = rpcError.detail ? ` (${rpcError.detail})` : ''
         super(`JSON-RPC error ${rpcError.code}: ${rpcError.message}${detail}`)
-        this.name = 'TustenRpcError'
+        this.name = 'RpcError'
         this.rpcError = rpcError
     }
 

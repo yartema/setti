@@ -6,8 +6,9 @@ import { defineRoute } from '@tusten/core'
 export default defineRoute([
     {
         id: 'about',
-        title: 'About',
-        description: 'О фреймворке tusten',
+        metaConfig: {
+            title: 'About Page',
+        },
         type: 'main',
         middleware: [],
         contentConfig: {

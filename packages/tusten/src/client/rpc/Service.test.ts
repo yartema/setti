@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Service } from './Service'
-import { TustenRpcError } from '../../errors'
+import { RpcError } from '../../errors'
 
 /**
  *
@@ -106,11 +106,11 @@ describe('Service', () => {
         expect((init.headers as Record<string, string>)['content-type']).toBe('application/json')
     })
 
-    it('ошибка из ответа → TustenRpcError', async () => {
+    it('ошибка из ответа → RpcError', async () => {
         fetchMock.mockImplementation(async () => rpcErr(-32601, 'Method not found'))
         const svc = new Service({ endpoint: 'Users' })
-        const err = (await svc.call('Nope').catch((e) => e)) as TustenRpcError
-        expect(err).toBeInstanceOf(TustenRpcError)
+        const err = (await svc.call('Nope').catch((e) => e)) as RpcError
+        expect(err).toBeInstanceOf(RpcError)
         expect(err.code).toBe(-32601)
         expect(err.message).toContain('Method not found')
     })
@@ -118,7 +118,7 @@ describe('Service', () => {
     it('error.data сохраняется', async () => {
         fetchMock.mockImplementation(async () => rpcErr(-32602, 'Invalid params', { field: 'limit' }))
         const svc = new Service({ endpoint: 'Users' })
-        const err = (await svc.call('Ping').catch((e) => e)) as TustenRpcError
+        const err = (await svc.call('Ping').catch((e) => e)) as RpcError
         expect(err.data).toEqual({ field: 'limit' })
     })
 
@@ -272,5 +272,59 @@ describe('Service', () => {
         await svc.query()
         await svc.query()
         expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    describe('cache limit (LRU)', () => {
+        it('эвиктит старые при превышении cacheMaxEntries', async () => {
+            fetchMock.mockImplementation(async () => rpcOk('ok'))
+            const svc = new Service({
+                endpoint: 'Users',
+                cache: 30_000,
+                cacheMaxEntries: 3,
+            })
+
+            for (let i = 0; i < 5; i++) {
+                await svc.call('Ping', { i })
+            }
+
+            expect(Service.cacheSize()).toBe(3)
+            expect(fetchMock).toHaveBeenCalledTimes(5)
+        })
+
+        it('LRU touch — старый элемент остаётся после повторного доступа', async () => {
+            fetchMock.mockImplementation(async () => rpcOk('ok'))
+            const svc = new Service({
+                endpoint: 'Users',
+                cache: 30_000,
+                cacheMaxEntries: 2,
+            })
+
+            await svc.call('Ping', { i: 1 }) // cache: [1]
+            await svc.call('Ping', { i: 2 }) // cache: [1, 2]
+            await svc.call('Ping', { i: 1 }) // hit → touch 1 → cache: [2, 1]
+            await svc.call('Ping', { i: 3 }) // miss → evict 2 → cache: [1, 3]
+
+            expect(Service.cacheSize()).toBe(2)
+            expect(fetchMock).toHaveBeenCalledTimes(3) // 1, 2, 3 (call 1 — hit)
+
+            // { i: 1 } должен быть в кэше
+            await svc.call('Ping', { i: 1 })
+            expect(fetchMock).toHaveBeenCalledTimes(3)
+
+            // { i: 2 } должен быть эвиктнут — снова fetch
+            await svc.call('Ping', { i: 2 })
+            expect(fetchMock).toHaveBeenCalledTimes(4)
+        })
+
+        it('cacheMaxEntries по умолчанию — 500', async () => {
+            fetchMock.mockImplementation(async () => rpcOk('ok'))
+            const svc = new Service({ endpoint: 'Users', cache: 30_000 })
+
+            for (let i = 0; i < 510; i++) {
+                await svc.call('Ping', { i })
+            }
+
+            expect(Service.cacheSize()).toBe(500)
+        })
     })
 })
