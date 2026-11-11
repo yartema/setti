@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useSlice, useParams, usePathname, Link } from 'setti/client'
+import { useSlice, useParams, usePathname, Link } from '@tusten/core/client'
 import type { PostSlice } from './Factories/blogPost'
 
 /**

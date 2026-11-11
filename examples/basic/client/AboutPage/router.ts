@@ -1,4 +1,4 @@
-import { defineRoute } from 'setti'
+import { defineRoute } from '@tusten/core'
 
 /**
  * Маршрут страницы About.
@@ -7,7 +7,7 @@ export default defineRoute([
     {
         id: 'about',
         title: 'About',
-        description: 'О фреймворке setti',
+        description: 'О фреймворке tusten',
         type: 'main',
         middleware: [],
         contentConfig: {

@@ -1,4 +1,4 @@
-import { defineServerRoutes } from 'setti/server'
+import { defineServerRoutes } from '@tusten/core/server'
 
 /**
  * API-роуты примера.

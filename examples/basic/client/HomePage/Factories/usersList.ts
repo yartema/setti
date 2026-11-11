@@ -1,5 +1,5 @@
-import { Slice, SettiService } from 'setti'
-import type { FactoryImplementation } from 'setti'
+import { Slice, TustenService } from '@tusten/core'
+import type { FactoryImplementation } from '@tusten/core'
 
 /** Пользователь. */
 export interface User {
@@ -15,7 +15,7 @@ export interface UserListState {
 }
 
 /** Сервис для Users.List. */
-export const usersService = new SettiService({ endpoint: 'Users', binding: { query: 'List' }, cache: 30000 })
+export const usersService = new TustenService({ endpoint: 'Users', binding: { query: 'List' }, cache: 30000 })
 
 /**
  * Enriched-слайс: `reload` создаётся заново на сервере и клиенте.

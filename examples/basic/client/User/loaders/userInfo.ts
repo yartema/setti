@@ -1,5 +1,5 @@
-import { Slice, SettiService } from 'setti'
-import type { FactoryImplementation } from 'setti'
+import { Slice, TustenService } from '@tusten/core'
+import type { FactoryImplementation } from '@tusten/core'
 
 /** Данные пользователя. */
 export interface UserInfo {
@@ -12,7 +12,7 @@ export interface UserInfo {
 }
 
 /** Сервис для Users.Read. */
-const usersService = new SettiService({ endpoint: 'Users', cache: 30000 })
+const usersService = new TustenService({ endpoint: 'Users', cache: 30000 })
 
 /** Слайс. */
 export class UserInfoSlice extends Slice<UserInfo | null> {}

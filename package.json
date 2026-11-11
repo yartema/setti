@@ -1,60 +1,60 @@
 {
-    "name": "setti",
-    "version": "0.2.0-alpha.4",
-    "private": true,
-    "type": "module",
-    "description": "setti — fullstack React framework on React 19 + Fastify + Vite",
-    "license": "MIT",
-    "author": "yar.tema",
-    "homepage": "https://github.com/yartema/setti#readme",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/yartema/setti.git"
-    },
-    "bugs": {
-        "url": "https://github.com/yartema/setti/issues"
-    },
-    "engines": {
-        "node": ">=20.0.0",
-        "pnpm": ">=9.0.0"
-    },
-    "packageManager": "pnpm@12.14.0",
-    "scripts": {
-        "lint": "eslint .",
-        "lint:fix": "eslint . --fix",
-        "format": "prettier --write .",
-        "format:check": "prettier --check .",
-        "typecheck": "pnpm -r --parallel typecheck",
-        "build": "pnpm --filter setti build",
-        "inspect:basic": "pnpm --filter examples-basic inspect",
-        "dev:basic": "pnpm --filter examples-basic dev",
-        "build:basic": "pnpm --filter examples-basic exec numus build",
-        "start:basic": "pnpm --filter examples-basic exec numus start",
-        "test": "pnpm -r --parallel test",
-        "test:basic": "pnpm --filter setti test",
-        "test:coverage": "pnpm --filter setti test:coverage",
-        "publish:alpha": "pnpm --filter setti build && pnpm --filter setti publish --tag alpha --no-git-checks",
-        "publish:beta": "pnpm --filter setti build && pnpm --filter setti publish --tag beta --no-git-checks",
-        "publish:latest": "pnpm --filter setti build && pnpm --filter setti publish --tag latest --no-git-checks",
-        "version:alpha": "pnpm --filter setti exec npm version prerelease --preid=alpha",
-        "version:patch": "pnpm --filter setti exec npm version patch",
-        "version:minor": "pnpm --filter setti exec npm version minor",
-        "version:major": "pnpm --filter setti exec npm version major"
-    },
-    "devDependencies": {
-        "@eslint/js": "^9.17.0",
-        "@testing-library/dom": "^10.4.2",
-        "@testing-library/react": "^16.3.3",
-        "@types/node": "^22.10.2",
-        "@vitest/coverage-v8": "^5.1.0",
-        "eslint": "^9.17.0",
-        "eslint-config-prettier": "^10.1.8",
-        "eslint-plugin-jsdoc": "^50.6.1",
-        "globals": "^17.14.0",
-        "jsdom": "^31.0.0",
-        "prettier": "^3.9.10",
-        "typescript": "^5.7.2",
-        "typescript-eslint": "^8.18.0",
-        "vitest": "^5.1.0"
-    }
+  "name": "tusten-framework",
+  "version": "0.2.0-beta.1",
+  "private": true,
+  "type": "module",
+  "description": "tusten — fullstack React framework on React 19 + Fastify + Vite",
+  "license": "MIT",
+  "author": "yar.tema",
+  "homepage": "https://github.com/yartema/tusten#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yartema/tusten.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yartema/tusten/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@12.14.0",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "build": "pnpm --filter @tusten/core build",
+    "inspect:basic": "pnpm --filter examples-basic inspect",
+    "dev:basic": "pnpm --filter examples-basic dev",
+    "build:basic": "pnpm --filter examples-basic exec tusten build",
+    "start:basic": "pnpm --filter examples-basic exec tusten start",
+    "test": "pnpm -r --parallel test",
+    "test:basic": "pnpm --filter tusten test",
+    "test:coverage": "pnpm --filter tusten test:coverage",
+    "publish:alpha": "pnpm --filter @tusten/core build && cd packages/tusten && npm publish --tag alpha --access public && cd ../.. && npm dist-tag add @tusten/core@0.2.0-beta.0 alpha && npm dist-tag add @tusten/core@0.2.0-beta.0 latest",
+    "publish:beta": "pnpm --filter @tusten/core build && cd packages/tusten && npm publish --tag beta --access public && cd ../.. && npm dist-tag add @tusten/core@0.2.0-beta.0 beta && npm dist-tag add @tusten/core@0.2.0-beta.0 latest",
+    "publish:latest": "pnpm --filter @tusten/core build && cd packages/tusten && npm publish --tag latest --access public",
+    "version:alpha": "pnpm --filter tusten exec npm version prerelease --preid=alpha",
+    "version:patch": "pnpm --filter tusten exec npm version patch",
+    "version:minor": "pnpm --filter tusten exec npm version minor",
+    "version:major": "pnpm --filter tusten exec npm version major"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jsdoc": "^50.6.1",
+    "globals": "^17.14.0",
+    "jsdom": "^31.0.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^5.1.0"
+  }
 }

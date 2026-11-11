@@ -1,4 +1,4 @@
-import type { FactoryMap } from 'setti'
+import type { FactoryMap } from '@tusten/core'
 
 /**
  * `getConfig` для страницы Blog.

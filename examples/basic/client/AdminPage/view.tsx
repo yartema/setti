@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useStrictSlice, Link } from 'setti/client'
+import { useStrictSlice, Link } from '@tusten/core/client'
 import type { UserInfoSlice } from '../User/loaders/userInfo'
 
 /**

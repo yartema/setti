@@ -1,4 +1,4 @@
-import { defineGlobalLoader } from 'setti'
+import { defineGlobalLoader } from '@tusten/core'
 
 /**
  * Глобальные loaders: `userInfo` доступен всем страницам.

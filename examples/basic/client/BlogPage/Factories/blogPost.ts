@@ -1,5 +1,5 @@
-import { Slice } from 'setti'
-import type { FactoryImplementation, SettiRouter } from 'setti'
+import { Slice } from '@tusten/core'
+import type { FactoryImplementation, TustenRouter } from '@tusten/core'
 
 /** Пост. */
 export interface Post {
@@ -16,8 +16,8 @@ export class PostSlice extends Slice<Post> {}
  */
 export const BlogPostLoader: FactoryImplementation<Post> = {
     async loadData(_args, _deps, ctx) {
-        const router = ctx.router as SettiRouter
-        const slug = router.params.slug ?? 'unknown'
+        const router = ctx.router as TustenRouter
+        const slug = router.params.id ?? 'unknown'
         return {
             slug,
             title: `Post: ${slug}`,

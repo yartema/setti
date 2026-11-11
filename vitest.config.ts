@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config'
 
 /**
- * Конфигурация тестов setti.
+ * Конфигурация тестов tusten.
  *
  * - `environment: 'node'` — по умолчанию. Для тестов React-хуков —
  *   `// @vitest-environment jsdom` в шапке файла.

@@ -1,4 +1,4 @@
-import { defineRoute } from 'setti'
+import { defineRoute } from '@tusten/core'
 
 /**
  * Маршрут блога: `/blog/:slug`.

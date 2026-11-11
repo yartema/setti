@@ -1,5 +1,5 @@
 import type { JSX, ReactNode } from 'react'
-import { Link, Outlet, usePathname } from 'setti/client'
+import { Link, Outlet, usePathname } from '@tusten/core/client'
 
 /**
  * Основной layout: header с навигацией, main, footer.
@@ -13,7 +13,7 @@ export default function Main(): JSX.Element {
                 <Outlet />
             </main>
             <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
-                setti · React 19 · Fastify · Vite
+                tusten · React 19 · Fastify · Vite
             </footer>
         </div>
     )
@@ -29,7 +29,7 @@ function Header(): JSX.Element {
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
             <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
                 <Link href="/" className="flex items-center gap-2 text-lg font-bold">
-                    <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-sm font-mono text-white">setti</span>
+                    <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-sm font-mono text-white">tusten</span>
                     <span className="text-slate-700">demo</span>
                 </Link>
                 <nav className="flex gap-1">

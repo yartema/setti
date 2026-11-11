@@ -1,9 +1,9 @@
 import { useState, type JSX, type ReactNode } from 'react'
 import { Button } from '../shared/Button'
-import { useSlice, useStrictSlice, usePathname, useRouter, Link } from 'setti/client'
+import { useSlice, useStrictSlice, usePathname, useRouter, Link } from '@tusten/core/client'
 import type { UserListSlice } from './Factories/usersList'
 import type { UserInfoSlice } from '../User/loaders/userInfo'
-import { SettiService } from 'setti'
+import { TustenService } from '@tusten/core'
 import { usersService } from './Factories/usersList'
 
 /**
@@ -56,7 +56,7 @@ export function View(): JSX.Element {
     return (
         <div className="space-y-8">
             <section>
-                <h1 className="text-4xl font-bold tracking-tight text-slate-900">setti demo</h1>
+                <h1 className="text-4xl font-bold tracking-tight text-slate-900">tusten demo</h1>
                 <p className="mt-2 text-slate-600">React 19 · Fastify · Vite · SSR + SPA · Tailwind</p>
             </section>
 
@@ -133,7 +133,7 @@ export function View(): JSX.Element {
                         </button>
                         <button
                             onClick={() => {
-                                SettiService.invalidateAll()
+                                TustenService.invalidateAll()
                                 setApiResult('all cache invalidated')
                             }}
                             className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"

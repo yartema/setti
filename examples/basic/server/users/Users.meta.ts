@@ -1,5 +1,5 @@
-import { defineObject } from 'setti/server'
-import type { RpcContext } from 'setti/server'
+import { defineObject } from '@tusten/core/server'
+import type { RpcContext } from '@tusten/core/server'
 
 /**
  * Объект БЛ "Users" — демонстрация JSON-RPC.

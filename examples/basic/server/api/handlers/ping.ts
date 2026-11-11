@@ -1,4 +1,4 @@
-import type { ApiRouteContext } from 'setti/server'
+import type { ApiRouteContext } from '@tusten/core/server'
 
 /**
  * Пример API-роута: `GET /api/ping`.

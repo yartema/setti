@@ -6,7 +6,7 @@
  */
 export async function server(_params: Record<string, unknown>, ctx: Record<string, unknown>): Promise<void> {
     const router = ctx.router as { path: string } | undefined
-    console.log('[setti-server-logger]', router?.path ?? '?')
+    console.log('[tusten-server-logger]', router?.path ?? '?')
 }
 
 /**
@@ -18,5 +18,5 @@ export async function server(_params: Record<string, unknown>, ctx: Record<strin
 export async function client(_params: Record<string, unknown>, ctx: Record<string, unknown>): Promise<void> {
     const to = ctx.to as { path: string }
     const from = ctx.from as { path: string }
-    console.log('[setti-client-logger]', from.path, '→', to.path)
+    console.log('[tusten-client-logger]', from.path, '→', to.path)
 }

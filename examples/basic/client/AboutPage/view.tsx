@@ -1,5 +1,5 @@
 import type { JSX, ReactNode } from 'react'
-import { useSlice, useStrictSlice, usePathname, useQuery, useParams, useRouter, Link } from 'setti/client'
+import { useSlice, useStrictSlice, usePathname, useQuery, useParams, useRouter, Link } from '@tusten/core/client'
 import type { UserInfoSlice } from '../User/loaders/userInfo'
 import type { StatsSlice } from './Factories/stats'
 import './view.css'
@@ -83,12 +83,12 @@ export function View(): JSX.Element {
                             'Client + server middleware',
                             'API routes (Fastify)',
                             'Prefetch pipeline',
-                            'Prod build (setti build/start)',
+                            'Prod build (tusten build/start)',
                             'Tailwind v4',
                             'Link / router.push / back',
                         ].map((f) => (
                             <li key={f} className="flex items-center gap-2 text-slate-700">
-                                <span className="setti-pulse text-emerald-500">●</span>
+                                <span className="tusten-pulse text-emerald-500">●</span>
                                 {f}
                             </li>
                         ))}

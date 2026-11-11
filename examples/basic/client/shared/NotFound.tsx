@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { Link, usePathname } from 'setti/client'
+import { Link, usePathname } from '@tusten/core/client'
 
 /**
  * Кастомная 404.

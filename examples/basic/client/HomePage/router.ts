@@ -1,4 +1,4 @@
-import { defineRoute } from 'setti'
+import { defineRoute } from '@tusten/core'
 
 /**
  * Маршрут главной страницы.
@@ -9,7 +9,7 @@ export default defineRoute([
         id: 'home',
         index: true,
         title: 'Главная',
-        description: 'Демо-страница setti',
+        description: 'Демо-страница tusten',
         type: 'main',
         middleware: [{ id: 'auth', handler: 'client/middleware/auth' }],
         contentConfig: {

@@ -1,4 +1,4 @@
-import type { FactoryMap, SettiRouter } from 'setti'
+import type { FactoryMap, TustenRouter } from '@tusten/core'
 
 /**
  * `getConfig` для страницы HomePage.
@@ -9,7 +9,7 @@ import type { FactoryMap, SettiRouter } from 'setti'
  * @param _router контекст маршрута.
  * @returns карта фабрик.
  */
-export default function getConfig(_configParams: Record<string, unknown>, _router: SettiRouter): FactoryMap {
+export default function getConfig(_configParams: Record<string, unknown>, _router: TustenRouter): FactoryMap {
     return {
         UserList: {
             dataFactoryName: 'HomePage/Factories/usersList:UserListLoader',

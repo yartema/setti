@@ -1,4 +1,4 @@
-import { defineRoute } from 'setti'
+import { defineRoute } from '@tusten/core'
 
 /**
  * Маршрут админки. `parentId: 'home'` → URL `/admin`

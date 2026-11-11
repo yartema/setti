@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { Outlet } from 'setti/client'
+import { Outlet } from '@tusten/core/client'
 
 /**
  * Вложенный layout для админки. Оборачивает страницу в `Main`.
@@ -14,7 +14,7 @@ export default function Admin(): JSX.Element {
                 <ul className="space-y-1 text-sm text-indigo-900">
                     <li>• dashboard</li>
                     <li>• users</li>
-                    <li>• settings</li>
+                    <li>• tustenngs</li>
                 </ul>
             </aside>
             <section className="rounded-xl border-2 border-dashed border-indigo-300 bg-white p-5">

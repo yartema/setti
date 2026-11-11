@@ -1,5 +1,5 @@
-import { Slice, SettiService } from 'setti'
-import type { FactoryImplementation } from 'setti'
+import { Slice, TustenService } from '@tusten/core'
+import type { FactoryImplementation } from '@tusten/core'
 
 /** Данные для About. */
 export interface AboutStatsState {
@@ -9,7 +9,7 @@ export interface AboutStatsState {
 }
 
 /** Сервис для System.Ping. */
-const systemService = new SettiService({ endpoint: 'System' })
+const systemService = new TustenService({ endpoint: 'System' })
 
 /** Слайс. */
 export class StatsSlice extends Slice<AboutStatsState> {}
