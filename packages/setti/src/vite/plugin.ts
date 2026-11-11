@@ -1,14 +1,7 @@
 import path from 'node:path'
 import fs from 'node:fs'
 import type { Plugin } from 'vite'
-import type {
-    CompiledRoute,
-    FactoryMap,
-    MiddlewareDef,
-    SettiRoute,
-    ResolvedSettiConfig,
-    RouteTree,
-} from '../types'
+import type { CompiledRoute, FactoryMap, MiddlewareDef, SettiRoute, ResolvedSettiConfig, RouteTree } from '../types'
 
 /** Опции Vite-плагина setti. */
 export interface SettiVitePluginOptions {
@@ -38,15 +31,7 @@ const RESOLVED_SSR_ENTRY = '\0' + VIRTUAL_SSR_ENTRY
  * @returns Vite-плагин.
  */
 export function settiPlugin(options: SettiVitePluginOptions): Plugin {
-    const {
-        projectDir,
-        clientDir,
-        config,
-        routeTree,
-        factoryModules = [],
-        globalFactories = {},
-        cssMain,
-    } = options
+    const { projectDir, clientDir, config, routeTree, factoryModules = [], globalFactories = {}, cssMain } = options
 
     /**
      * Резолвит спеку клиентского модуля в Vite-путь.
@@ -104,8 +89,7 @@ export function settiPlugin(options: SettiVitePluginOptions): Plugin {
     const routesData = Array.from(routeTree.byId.entries()).map(([id, route]) => {
         const urlPath = routeTree.paths.get(id)!
         const templatePath = resolveSpec(route.contentConfig.workspaceConfig.template)
-        const templateExport =
-            route.contentConfig.workspaceConfig.template.split(':')[1] ?? 'default'
+        const templateExport = route.contentConfig.workspaceConfig.template.split(':')[1] ?? 'default'
 
         return {
             id,

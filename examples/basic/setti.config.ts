@@ -19,9 +19,7 @@ export default defineSettiConfig({
     server: {
         routes: 'server/api/routes.ts',
     },
-    middleware: [
-        { id: 'logger', handler: 'client/shared/middleware/logger', side: 'both' },
-    ],
+    middleware: [{ id: 'logger', handler: 'client/shared/middleware/logger', side: 'both' }],
     fastify: {
         logger: false,
     },

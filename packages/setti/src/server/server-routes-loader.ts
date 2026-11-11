@@ -16,10 +16,7 @@ import type { ServerRoute } from '../types'
  * @returns массив API-роутов.
  * @throws {SettiError} если файл не найден или структура невалидна.
  */
-export async function loadServerRoutes(
-    projectDir: string,
-    routesPath: string,
-): Promise<ServerRoute[]> {
+export async function loadServerRoutes(projectDir: string, routesPath: string): Promise<ServerRoute[]> {
     const abs = path.resolve(projectDir, routesPath)
 
     if (!(await fileExists(abs))) {
@@ -31,9 +28,7 @@ export async function loadServerRoutes(
     const routes = mod.default
 
     if (!Array.isArray(routes)) {
-        throw new SettiError(
-            `server.routes at "${abs}" must default-export an array (defineServerRoutes([...]))`,
-        )
+        throw new SettiError(`server.routes at "${abs}" must default-export an array (defineServerRoutes([...]))`)
     }
 
     for (const [i, r] of routes.entries()) {

@@ -26,10 +26,7 @@ export class UserInfoSlice extends Slice<UserInfo | null> {}
 export const UserInfoLoader: FactoryImplementation<UserInfo | null> = {
     async loadData() {
         try {
-            const user = await usersService.call<{ id: number; name: string }>(
-                'Read',
-                { id: 1 },
-            )
+            const user = await usersService.call<{ id: number; name: string }>('Read', { id: 1 })
             return {
                 id: user.id,
                 name: user.name,

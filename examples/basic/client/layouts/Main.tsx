@@ -1,5 +1,5 @@
 import type { JSX, ReactNode } from 'react'
-import { Link, Outlet, usePathname } from 'setti/client';
+import { Link, Outlet, usePathname } from 'setti/client'
 
 /**
  * Основной layout: header с навигацией, main, footer.
@@ -29,9 +29,7 @@ function Header(): JSX.Element {
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
             <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
                 <Link href="/" className="flex items-center gap-2 text-lg font-bold">
-          <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-sm font-mono text-white">
-            setti
-          </span>
+                    <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-sm font-mono text-white">setti</span>
                     <span className="text-slate-700">demo</span>
                 </Link>
                 <nav className="flex gap-1">
@@ -68,9 +66,7 @@ function NavLink(props: NavLinkProps): JSX.Element {
             href={props.href}
             className={
                 'rounded-md px-3 py-1.5 text-sm font-medium transition ' +
-                (isActive
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
+                (isActive ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
             }
         >
             {props.children}

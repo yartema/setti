@@ -14,6 +14,7 @@
 > ⚠️ **Pre-alpha (`0.1.0-alpha`).**
 >
 > ⚠️ **Pre-alpha (`0.1.0-alpha`).**
+>
 > - Установка: `pnpm add setti@alpha`
 > - **API может измениться** до `1.0.0`.
 > - **Не используйте в production.**
@@ -74,22 +75,20 @@ pnpm --filter examples-basic exec setti start    # prod-сервер
 import { defineRoute } from 'setti'
 
 export default defineRoute([
-  {
-    id: 'home',
-    index: true,                    // URL: /
-    title: 'Главная',
-    type: 'main',                   // layout из config.layouts
-    middleware: [
-      { id: 'auth', handler: 'client/middleware/auth' },
-    ],
-    contentConfig: {
-      workspaceConfig: { template: 'HomePage/view:View' },
-      prefetchConfig: {
-        configLoader: 'HomePage/Factories/Root',
-        dependencies: ['userInfo'],  // глобальный loader
-      },
+    {
+        id: 'home',
+        index: true, // URL: /
+        title: 'Главная',
+        type: 'main', // layout из config.layouts
+        middleware: [{ id: 'auth', handler: 'client/middleware/auth' }],
+        contentConfig: {
+            workspaceConfig: { template: 'HomePage/view:View' },
+            prefetchConfig: {
+                configLoader: 'HomePage/Factories/Root',
+                dependencies: ['userInfo'], // глобальный loader
+            },
+        },
     },
-  },
 ])
 ```
 
@@ -99,17 +98,14 @@ export default defineRoute([
 // client/HomePage/Factories/Root.ts
 import type { FactoryMap, SettiRouter } from 'setti'
 
-export default function getConfig(
-  configParams: Record<string, unknown>,
-  router: SettiRouter,
-): FactoryMap {
-  return {
-    UserList: {
-      dataFactoryName: 'HomePage/Factories/usersList:UserListLoader',
-      dataFactoryArguments: { limit: 10 },
-      dependencies: [],
-    },
-  }
+export default function getConfig(configParams: Record<string, unknown>, router: SettiRouter): FactoryMap {
+    return {
+        UserList: {
+            dataFactoryName: 'HomePage/Factories/usersList:UserListLoader',
+            dataFactoryArguments: { limit: 10 },
+            dependencies: [],
+        },
+    }
 }
 ```
 
@@ -119,37 +115,42 @@ export default function getConfig(
 // client/HomePage/Factories/usersList.ts
 import { Slice, SettiService, type FactoryImplementation } from 'setti'
 
-interface User { id: number; name: string }
+interface User {
+    id: number
+    name: string
+}
 interface UserListState {
-  users: User[]
-  total: number
-  reload: () => void
+    users: User[]
+    total: number
+    reload: () => void
 }
 
 const usersService = new SettiService({
-  endpoint: 'Users',
-  binding: { query: 'List' },
-  cache: 30_000, // cross-page кэш на 30 сек
+    endpoint: 'Users',
+    binding: { query: 'List' },
+    cache: 30_000, // cross-page кэш на 30 сек
 })
 
 export class UserListSlice extends Slice<UserListState> {
-  protected override _initState(result: unknown): UserListState {
-    const { users } = result as { users: User[] }
-    return {
-      users,
-      total: users.length,
-      reload: () => { /* создаётся заново и на сервере, и на клиенте */ },
+    protected override _initState(result: unknown): UserListState {
+        const { users } = result as { users: User[] }
+        return {
+            users,
+            total: users.length,
+            reload: () => {
+                /* создаётся заново и на сервере, и на клиенте */
+            },
+        }
     }
-  }
 }
 
 export const UserListLoader: FactoryImplementation<UserListState> = {
-  async loadData(args) {
-    const limit = (args.limit as number) ?? 10
-    const users = await usersService.query<{ limit: number }, User[]>({ limit })
-    return { users }
-  },
-  slice: UserListSlice,
+    async loadData(args) {
+        const limit = (args.limit as number) ?? 10
+        const users = await usersService.query<{ limit: number }, User[]>({ limit })
+        return { users }
+    },
+    slice: UserListSlice,
 }
 ```
 
@@ -161,19 +162,21 @@ import { useSlice, usePathname, Link } from 'setti/client'
 import type { UserListSlice } from './Factories/usersList'
 
 export function View() {
-  const slice = useSlice<UserListSlice>('UserList')
-  const state = slice?.getState()
-  const path = usePathname()
+    const slice = useSlice<UserListSlice>('UserList')
+    const state = slice?.getState()
+    const path = usePathname()
 
-  if (!state) return <div>Loading…</div>
+    if (!state) return <div>Loading…</div>
 
-  return (
-    <div>
-      <h1>HomePage ({path})</h1>
-      <p>Users: {state.total}</p>
-      <Link href="/about" prefetch>→ About (SPA, prefetch on hover)</Link>
-    </div>
-  )
+    return (
+        <div>
+            <h1>HomePage ({path})</h1>
+            <p>Users: {state.total}</p>
+            <Link href="/about" prefetch>
+                → About (SPA, prefetch on hover)
+            </Link>
+        </div>
+    )
 }
 ```
 
@@ -186,25 +189,25 @@ import type { RpcContext } from 'setti/server'
 import * as v from 'valibot'
 
 export default defineObject({
-  name: 'Users',
-  description: 'Пользователи',
-  methods: {
-    List: {
-      description: 'Список',
-      params: v.object({ limit: v.optional(v.number()) }),
-      handler: async (params, ctx) => {
-        return ctx.db.users.findMany({ take: params.limit })
-      },
+    name: 'Users',
+    description: 'Пользователи',
+    methods: {
+        List: {
+            description: 'Список',
+            params: v.object({ limit: v.optional(v.number()) }),
+            handler: async (params, ctx) => {
+                return ctx.db.users.findMany({ take: params.limit })
+            },
+        },
+        Update: {
+            auth: true,
+            handler: async (params, ctx) => {
+                const updated = await ctx.db.users.update(params)
+                ctx.stomp.message('users.updated', { id: updated.id })
+                return updated
+            },
+        },
     },
-    Update: {
-      auth: true,
-      handler: async (params, ctx) => {
-        const updated = await ctx.db.users.update(params)
-        ctx.stomp.message('users.updated', { id: updated.id })
-        return updated
-      },
-    },
-  },
 })
 ```
 
@@ -216,23 +219,23 @@ import { defineSettiConfig } from 'setti'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineSettiConfig({
-  ssr: true,
-  layouts: {
-    main: './layouts/Main.tsx',
-    admin: './layouts/Admin.tsx',
-  },
-  components: {
-    error: 'shared/ErrorBoundary:ErrorBoundary',
-    loading: 'shared/Loading:Loading',
-    notFound: 'shared/NotFound:NotFound',
-  },
-  server: {
-    routes: 'server/api/routes.ts',
-    plugins: 'server/plugins',
-  },
-  rpc: { enabled: true, url: '/service' },
-  css: { main: 'styles/main.css' },
-  vite: { plugins: [tailwindcss()] },
+    ssr: true,
+    layouts: {
+        main: './layouts/Main.tsx',
+        admin: './layouts/Admin.tsx',
+    },
+    components: {
+        error: 'shared/ErrorBoundary:ErrorBoundary',
+        loading: 'shared/Loading:Loading',
+        notFound: 'shared/NotFound:NotFound',
+    },
+    server: {
+        routes: 'server/api/routes.ts',
+        plugins: 'server/plugins',
+    },
+    rpc: { enabled: true, url: '/service' },
+    css: { main: 'styles/main.css' },
+    vite: { plugins: [tailwindcss()] },
 })
 ```
 

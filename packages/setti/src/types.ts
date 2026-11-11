@@ -1,15 +1,8 @@
-import type { Slice } from './client/slices/Slice';
+import type { Slice } from './client/slices/Slice'
 import type { FastifyServerOptions } from 'fastify'
 
 /** HTTP-метод API-роута. */
-export type HttpMethod =
-    | 'GET'
-    | 'POST'
-    | 'PUT'
-    | 'PATCH'
-    | 'DELETE'
-    | 'HEAD'
-    | 'OPTIONS'
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
 
 /**
  * Объявление middleware.
@@ -97,16 +90,16 @@ export interface SettiConfig {
     /** Публичные и приватные переменные окружения (Phase 2). */
     runtimeConfig?: {
         public?: Record<string, unknown>
-    },
+    }
     css?: {
         /**
          * Путь до основного CSS-файла относительно `clientDir`.
          * Обычно содержит Tailwind-директивы и глобальные стили.
          */
         main?: string
-    },
+    }
     /** Глобальные middleware (client / server / both). */
-    middleware?: MiddlewareDef[],
+    middleware?: MiddlewareDef[]
     /**
      * Прямой проброс в `Fastify(opts)`.
      *
@@ -163,7 +156,7 @@ export interface ResolvedSettiConfig {
     clientDir: string
     serverDir: string
     layouts: Record<string, string>
-    middleware: MiddlewareDef[],
+    middleware: MiddlewareDef[]
     server: {
         port: number
         host: string
@@ -179,7 +172,7 @@ export interface ResolvedSettiConfig {
     }
     runtimeConfig: {
         public: Record<string, unknown>
-    },
+    }
     fastify?: FastifyServerOptions
     rpc: ResolvedRpcOptions
     components: {
@@ -203,7 +196,7 @@ export interface FactoryDef {
      * Зависимости: имена других фабрик текущей страницы
      * или глобальных loaders. Коллизии запрещены (A3).
      */
-    dependencies?: string[],
+    dependencies?: string[]
     /** Fastify-опции (пробрасываются как есть). */
     fastify?: FastifyServerOptions
 }
@@ -361,13 +354,7 @@ export interface CompiledRoute {
 /**
  * Вид модуля в манифесте — определяет, как его резолвить и подключать.
  */
-export type ModuleKind =
-    | 'component'
-    | 'routes'
-    | 'config'
-    | 'factory'
-    | 'layout'
-    | 'globalLoader'
+export type ModuleKind = 'component' | 'routes' | 'config' | 'factory' | 'layout' | 'globalLoader'
 
 /**
  * Запись манифеста для одного модуля.
@@ -423,9 +410,7 @@ export interface StandardSchemaV1Failure {
 }
 
 /** Результат валидации. */
-export type StandardSchemaV1Result<Output> =
-    | StandardSchemaV1Success<Output>
-    | StandardSchemaV1Failure
+export type StandardSchemaV1Result<Output> = StandardSchemaV1Success<Output> | StandardSchemaV1Failure
 
 /**
  * Standard Schema интерфейс (valibot, zod, arktype, effect-schema).
@@ -437,11 +422,7 @@ export interface StandardSchemaV1<Input = unknown, Output = Input> {
     readonly '~standard': {
         readonly version: 1
         readonly vendor: string
-        readonly validate: (
-            value: unknown,
-        ) =>
-            | StandardSchemaV1Result<Output>
-            | Promise<StandardSchemaV1Result<Output>>
+        readonly validate: (value: unknown) => StandardSchemaV1Result<Output> | Promise<StandardSchemaV1Result<Output>>
     }
     /** Фантомные поля для вывода типа (не используются в рантайме). */
     readonly '~setti-input'?: Input
@@ -457,9 +438,9 @@ export type AuthRequirement =
     | undefined
     | true
     | {
-    /** Требуется одна из ролей (массив = OR). */
-    roles: string[]
-}
+          /** Требуется одна из ролей (массив = OR). */
+          roles: string[]
+      }
 
 /**
  * Описание одного RPC-метода.
@@ -544,9 +525,7 @@ export interface RpcOptions {
      * @param req Fastify-запрос (только на сервере).
      * @returns объект для мержа в `RpcContext`.
      */
-    extendContext?: (
-        req: unknown,
-    ) => Promise<Record<string, unknown>> | Record<string, unknown>
+    extendContext?: (req: unknown) => Promise<Record<string, unknown>> | Record<string, unknown>
 }
 
 /** Резолвнутые опции RPC. */
@@ -554,16 +533,11 @@ export interface ResolvedRpcOptions {
     enabled: boolean
     url: string
     describe: boolean
-    extendContext?: (
-        req: unknown,
-    ) => Promise<Record<string, unknown>> | Record<string, unknown>
+    extendContext?: (req: unknown) => Promise<Record<string, unknown>> | Record<string, unknown>
 }
 
 /** Изоморфный исполнитель JSON-RPC (регистрируется сервером в ALS). */
-export type RpcExecutor = (
-    payload: string,
-    headers: Record<string, string>,
-) => Promise<Response>
+export type RpcExecutor = (payload: string, headers: Record<string, string>) => Promise<Response>
 
 /** CRUD-операции для `IBinding`. */
 export type CrudOp = 'read' | 'query' | 'create' | 'update' | 'destroy'

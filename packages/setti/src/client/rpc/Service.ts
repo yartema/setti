@@ -1,17 +1,8 @@
 import { Remote } from './Remote'
-import {
-    isServer,
-    getServerExecutor,
-    getCurrentHeaders,
-    getServerCache,
-} from './server-bridge'
-import { JsonRpcErrorPayload, SettiRpcError } from '../../errors';
+import { isServer, getServerExecutor, getCurrentHeaders, getServerCache } from './server-bridge'
+import { JsonRpcErrorPayload, SettiRpcError } from '../../errors'
 import { stringify as devalueStringify } from 'devalue'
-import type {
-    ServiceOptions,
-    CallOptions,
-    ServiceCacheEntry,
-} from '../../types'
+import type { ServiceOptions, CallOptions, ServiceCacheEntry } from '../../types'
 
 /** JSON-RPC ответ. */
 interface JsonRpcResponse<R> {
@@ -39,9 +30,7 @@ const clientServiceCache = new Map<string, ServiceCacheEntry>()
  *   - `cache: false` в опциях вызова — не кэшировать.
  *   - Инвалидация: `service.invalidate()` / `invalidate(method)` / `invalidate(method, params)` / `SettiService.invalidateAll()`.
  */
-export class Service<T extends Record<string, unknown> = Record<string, unknown>>
-    extends Remote<T>
-{
+export class Service<T extends Record<string, unknown> = Record<string, unknown>> extends Remote<T> {
     private _serviceOpts: ServiceOptions
 
     /**
@@ -82,9 +71,7 @@ export class Service<T extends Record<string, unknown> = Record<string, unknown>
      * @returns `Response`.
      */
     async callRaw(method: string, params?: unknown): Promise<Response> {
-        const fullMethod = this._serviceOpts.endpoint
-            ? `${this._serviceOpts.endpoint}.${method}`
-            : method
+        const fullMethod = this._serviceOpts.endpoint ? `${this._serviceOpts.endpoint}.${method}` : method
 
         const payload = JSON.stringify({
             jsonrpc: '2.0',
@@ -105,13 +92,8 @@ export class Service<T extends Record<string, unknown> = Record<string, unknown>
      * @returns `result`.
      * @throws {SettiRpcError} при `error` в ответе.
      */
-    async call<R = unknown>(
-        method: string,
-        params?: unknown,
-        opts?: CallOptions,
-    ): Promise<R> {
-        const cacheTtl =
-            opts?.cache !== undefined ? opts.cache : this._serviceOpts.cache
+    async call<R = unknown>(method: string, params?: unknown, opts?: CallOptions): Promise<R> {
+        const cacheTtl = opts?.cache !== undefined ? opts.cache : this._serviceOpts.cache
         const useCache = typeof cacheTtl === 'number' && cacheTtl > 0
         const store = useCache ? this.getCacheStore() : null
         const cacheKey = useCache ? this.getCacheKey(method, params) : ''

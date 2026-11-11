@@ -1,11 +1,6 @@
 import { SettiError } from '../errors'
 import type { AbstractSlice } from '../client/slices/AbstractSlice'
-import type {
-    FactoryImplementation,
-    FactoryMap,
-    SettiRoute,
-    SettiRouter,
-} from '../types'
+import type { FactoryImplementation, FactoryMap, SettiRoute, SettiRouter } from '../types'
 
 /** Минимальный контракт реестра слайсов. */
 export interface PrefetchRegistry {
@@ -51,9 +46,7 @@ export async function runGlobalPrefetch(
     const { route, globalRegistry, loadModule, registry, router } = ctx
     const states = new Map<string, unknown>()
     const slices = new Map<string, PrefetchSliceInfo>()
-    const needed = new Set<string>(
-        route.contentConfig.prefetchConfig.dependencies ?? [],
-    )
+    const needed = new Set<string>(route.contentConfig.prefetchConfig.dependencies ?? [])
 
     // Транзитивные.
     const queue = [...needed]
@@ -81,9 +74,7 @@ export async function runGlobalPrefetch(
     const sorted = topoSort(needed, (name) => {
         const def = globalRegistry[name]
         if (!def) {
-            throw new SettiError(
-                `Global dependency "${name}" not found in any *.loader.ts`,
-            )
+            throw new SettiError(`Global dependency "${name}" not found in any *.loader.ts`)
         }
         return def.dependencies ?? []
     })
@@ -92,14 +83,8 @@ export async function runGlobalPrefetch(
         const def = globalRegistry[name]!
         const implRaw = await loadModule(def.dataFactoryName)
         const impl = implRaw as Partial<FactoryImplementation>
-        if (
-            !impl ||
-            typeof impl.loadData !== 'function' ||
-            typeof impl.slice !== 'function'
-        ) {
-            throw new SettiError(
-                `Invalid global loader "${name}": expected loadData + slice class`,
-            )
+        if (!impl || typeof impl.loadData !== 'function' || typeof impl.slice !== 'function') {
+            throw new SettiError(`Invalid global loader "${name}": expected loadData + slice class`)
         }
 
         const args: Record<string, unknown> = { ...(def.dataFactoryArguments ?? {}) }
@@ -144,25 +129,16 @@ export async function runPagePrefetch(
 
     const getConfigRaw = await loadModule(prefetchCfg.configLoader)
     if (typeof getConfigRaw !== 'function') {
-        throw new SettiError(
-            `configLoader "${prefetchCfg.configLoader}" must export a function`,
-        )
+        throw new SettiError(`configLoader "${prefetchCfg.configLoader}" must export a function`)
     }
-    const factoryMap = (await getConfigRaw(
-        prefetchCfg.configParams ?? {},
-        router,
-    )) as FactoryMap
+    const factoryMap = (await getConfigRaw(prefetchCfg.configParams ?? {}, router)) as FactoryMap
     if (!factoryMap || typeof factoryMap !== 'object') {
-        throw new SettiError(
-            `getConfig from "${prefetchCfg.configLoader}" must return an object`,
-        )
+        throw new SettiError(`getConfig from "${prefetchCfg.configLoader}" must return an object`)
     }
 
     for (const name of Object.keys(factoryMap)) {
         if (globalRegistry[name]) {
-            throw new SettiError(
-                `A3 violation: "${name}" declared both in page's getConfig and global registry`,
-            )
+            throw new SettiError(`A3 violation: "${name}" declared both in page's getConfig and global registry`)
         }
     }
 
@@ -184,9 +160,7 @@ export async function runPagePrefetch(
         const def = factoryMap[name]
         if (!def) {
             if (globalStates.has(name)) return []
-            throw new SettiError(
-                `Unknown dependency "${name}" — not in getConfig, not a loaded global`,
-            )
+            throw new SettiError(`Unknown dependency "${name}" — not in getConfig, not a loaded global`)
         }
         return def.dependencies ?? []
     })
@@ -195,11 +169,7 @@ export async function runPagePrefetch(
         const def = factoryMap[name]!
         const implRaw = await loadModule(def.dataFactoryName)
         const impl = implRaw as Partial<FactoryImplementation>
-        if (
-            !impl ||
-            typeof impl.loadData !== 'function' ||
-            typeof impl.slice !== 'function'
-        ) {
+        if (!impl || typeof impl.loadData !== 'function' || typeof impl.slice !== 'function') {
             throw new SettiError(`Invalid factory "${name}": expected loadData + slice`)
         }
 
@@ -257,10 +227,7 @@ export async function runPrefetch(ctx: PrefetchContext): Promise<PrefetchResult>
  * @param depsOf функция зависимостей.
  * @returns отсортированный массив.
  */
-function topoSort(
-    nodes: Set<string>,
-    depsOf: (name: string) => string[],
-): string[] {
+function topoSort(nodes: Set<string>, depsOf: (name: string) => string[]): string[] {
     const result: string[] = []
     const state = new Map<string, 'visiting' | 'done'>()
 
@@ -268,9 +235,7 @@ function topoSort(
         const s = state.get(name)
         if (s === 'done') return
         if (s === 'visiting') {
-            throw new SettiError(
-                `Cycle detected: ${[...pathStack, name].join(' → ')}`,
-            )
+            throw new SettiError(`Cycle detected: ${[...pathStack, name].join(' → ')}`)
         }
         state.set(name, 'visiting')
         for (const dep of depsOf(name)) visit(dep, [...pathStack, name])

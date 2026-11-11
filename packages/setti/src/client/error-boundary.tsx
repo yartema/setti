@@ -1,9 +1,4 @@
-import {
-    Component,
-    createElement,
-    type ComponentType,
-    type ReactNode,
-} from 'react'
+import { Component, createElement, type ComponentType, type ReactNode } from 'react'
 
 /** Пропсы `SettiErrorBoundary`. */
 export interface SettiErrorBoundaryProps {
@@ -23,10 +18,7 @@ interface SettiErrorBoundaryState {
  * Работает в SSR (`renderToPipeableStream` ловит ошибки через boundary)
  * и на клиенте. Если `fallback` не задан — минимальная заглушка.
  */
-export class SettiErrorBoundary extends Component<
-    SettiErrorBoundaryProps,
-    SettiErrorBoundaryState
-> {
+export class SettiErrorBoundary extends Component<SettiErrorBoundaryProps, SettiErrorBoundaryState> {
     state: SettiErrorBoundaryState = { error: null }
 
     /**

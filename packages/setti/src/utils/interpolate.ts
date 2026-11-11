@@ -11,10 +11,7 @@ import { SettiError } from '../errors'
  * @returns строка с подставленными значениями.
  * @throws {SettiError} если переменная не найдена.
  */
-export function interpolate(
-    template: string,
-    vars: Record<string, unknown>,
-): string {
+export function interpolate(template: string, vars: Record<string, unknown>): string {
     return template.replace(/\{(\w+)\}/g, (_, key: string) => {
         if (!(key in vars)) {
             throw new SettiError(`Missing variable "${key}" for template "${template}"`)

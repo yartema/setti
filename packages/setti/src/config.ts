@@ -18,16 +18,10 @@ export async function loadConfig(projectDir: string): Promise<ResolvedSettiConfi
     const altPath = path.join(projectDir, 'setti.config.js')
 
     // Ищем .ts, потом .js.
-    const target = (await fileExists(configPath))
-        ? configPath
-        : (await fileExists(altPath))
-            ? altPath
-            : null
+    const target = (await fileExists(configPath)) ? configPath : (await fileExists(altPath)) ? altPath : null
 
     if (!target) {
-        throw new SettiError(
-            `Config not found: expected "setti.config.ts" or "setti.config.js" in ${projectDir}`,
-        )
+        throw new SettiError(`Config not found: expected "setti.config.ts" or "setti.config.js" in ${projectDir}`)
     }
 
     // jiti грузит TS/ESM и возвращает default export.
@@ -64,17 +58,17 @@ export async function loadConfig(projectDir: string): Promise<ResolvedSettiConfi
         rpc:
             mod.rpc === false
                 ? {
-                    enabled: false,
-                    url: '/service',
-                    describe: false,
-                    extendContext: undefined,
-                }
+                      enabled: false,
+                      url: '/service',
+                      describe: false,
+                      extendContext: undefined,
+                  }
                 : {
-                    enabled: mod.rpc?.enabled ?? true,
-                    url: mod.rpc?.url ?? '/service',
-                    describe: mod.rpc?.describe ?? true,
-                    extendContext: mod.rpc?.extendContext,
-                },
+                      enabled: mod.rpc?.enabled ?? true,
+                      url: mod.rpc?.url ?? '/service',
+                      describe: mod.rpc?.describe ?? true,
+                      extendContext: mod.rpc?.extendContext,
+                  },
         components: {
             error: mod.components?.error ?? null,
             loading: mod.components?.loading ?? null,

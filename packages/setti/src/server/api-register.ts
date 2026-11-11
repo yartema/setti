@@ -24,16 +24,10 @@ export interface ApiMiddlewareContext {
 }
 
 /** Handler API-роута. */
-export type ApiRouteHandler = (
-    params: Record<string, unknown>,
-    ctx: ApiRouteContext,
-) => Promise<unknown>
+export type ApiRouteHandler = (params: Record<string, unknown>, ctx: ApiRouteContext) => Promise<unknown>
 
 /** Handler API-middleware. */
-export type ApiMiddlewareHandler = (
-    params: Record<string, unknown>,
-    ctx: ApiMiddlewareContext,
-) => Promise<unknown>
+export type ApiMiddlewareHandler = (params: Record<string, unknown>, ctx: ApiMiddlewareContext) => Promise<unknown>
 
 /**
  * Регистрирует Fastify-плагины из `server/plugins/`.
@@ -44,19 +38,14 @@ export type ApiMiddlewareHandler = (
  * @param plugins загруженные плагины (в нужном порядке).
  * @throws {SettiError} если default-экспорт не функция.
  */
-export async function registerServerPlugins(
-    fastify: FastifyInstance,
-    plugins: ServerPluginDef[],
-): Promise<void> {
+export async function registerServerPlugins(fastify: FastifyInstance, plugins: ServerPluginDef[]): Promise<void> {
     const jiti = createJiti(import.meta.url, { interopDefault: true })
 
     for (const plugin of plugins) {
         const mod = (await jiti.import(plugin.path)) as Record<string, unknown>
         const fn = mod.default
         if (typeof fn !== 'function') {
-            throw new SettiError(
-                `Fastify plugin "${plugin.name}" at ${plugin.path} must default-export a function`,
-            )
+            throw new SettiError(`Fastify plugin "${plugin.name}" at ${plugin.path} must default-export a function`)
         }
         await fastify.register(fn as Parameters<FastifyInstance['register']>[0])
     }
@@ -89,12 +78,7 @@ export async function registerServerRoutes(
             url: route.path,
             async preHandler(request, reply) {
                 for (const mw of route.middleware ?? []) {
-                    const fn = await loadHandlerFunction(
-                        mw.handler,
-                        projectDir,
-                        jiti,
-                        `middleware "${mw.id}"`,
-                    )
+                    const fn = await loadHandlerFunction(mw.handler, projectDir, jiti, `middleware "${mw.id}"`)
                     const result = await (fn as ApiMiddlewareHandler)(mw.params ?? {}, {
                         request,
                         reply,
@@ -152,9 +136,7 @@ async function loadHandlerFunction(
     const mod = (await jiti.import(abs)) as Record<string, unknown>
     const fn = exportName ? mod[exportName] : mod.default
     if (typeof fn !== 'function') {
-        throw new SettiError(
-            `Export "${exportName ?? 'default'}" of ${label} at ${abs} is not a function`,
-        )
+        throw new SettiError(`Export "${exportName ?? 'default'}" of ${label} at ${abs} is not a function`)
     }
     return fn
 }

@@ -24,14 +24,16 @@ export function useRouter(): SettiRouterApi {
     void _router
 
     // navigator ставится в client-entry в `window.__settiNavigate`.
-    const nav = (globalThis as unknown as {
-        __settiNavigate?: {
-            push: (path: string) => Promise<void>
-            replace: (path: string) => Promise<void>
-            back: () => void
-            prefetch: (path: string) => Promise<void>
+    const nav = (
+        globalThis as unknown as {
+            __settiNavigate?: {
+                push: (path: string) => Promise<void>
+                replace: (path: string) => Promise<void>
+                back: () => void
+                prefetch: (path: string) => Promise<void>
+            }
         }
-    }).__settiNavigate
+    ).__settiNavigate
 
     if (!nav) {
         return {

@@ -9,8 +9,6 @@ import { useSliceInternal } from './useSliceInternal'
  * @param key имя слайса.
  * @returns слайс или undefined.
  */
-export function useSlice<S extends AbstractSlice<unknown>>(
-    key: string,
-): S | undefined {
+export function useSlice<S extends AbstractSlice<unknown>>(key: string): S | undefined {
     return useSliceInternal<S>(key, { observeState: true })
 }

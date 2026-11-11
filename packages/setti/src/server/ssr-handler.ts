@@ -105,19 +105,14 @@ export function createSSRHandler(options: SSRHandlerOptions) {
         SettiNotFound,
     } = options
 
-    return async function handler(
-        req: FastifyRequest,
-        reply: FastifyReply,
-    ): Promise<void> {
+    return async function handler(req: FastifyRequest, reply: FastifyReply): Promise<void> {
         reply.hijack()
 
         const runHandler = async (): Promise<void> => {
             const url = req.url.split('?')[0]
             const query = queryToObject(req.url)
             const matched = matchRoute(url, routeTree.compiled)
-            const route = matched
-                ? (routeTree.byId.get(matched.routeId) ?? null)
-                : null
+            const route = matched ? (routeTree.byId.get(matched.routeId) ?? null) : null
             const params = matched?.params ?? {}
 
             const viteClientScript = isDev
@@ -136,17 +131,13 @@ export function createSSRHandler(options: SSRHandlerOptions) {
             const clientMiddleware = (config.middleware ?? []).filter(
                 (m) => !m.side || m.side === 'client' || m.side === 'both',
             )
-            const middlewareJson = JSON.stringify(clientMiddleware).replace(
-                /</g,
-                '\\u003c',
-            )
+            const middlewareJson = JSON.stringify(clientMiddleware).replace(/</g, '\\u003c')
             const middlewareScript = `<script>window.__SETTI_MIDDLEWARE__=${middlewareJson}</script>`
 
             // ---- 404 ----
             if (!route) {
                 const accept = req.headers.accept ?? ''
-                const wantsJson =
-                    accept.includes('application/json') && !accept.includes('text/html')
+                const wantsJson = accept.includes('application/json') && !accept.includes('text/html')
 
                 if (wantsJson) {
                     reply.raw.statusCode = 404
@@ -181,9 +172,7 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                 let notFoundHtml: string
                 if (config.components.notFound) {
                     try {
-                        const NotFound = (await loadModule(
-                            config.components.notFound,
-                        )) as ComponentType
+                        const NotFound = (await loadModule(config.components.notFound)) as ComponentType
                         notFoundHtml = renderToString(
                             createElement(
                                 SettiProvider,
@@ -192,10 +181,7 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                             ),
                         )
                     } catch (err) {
-                        console.warn(
-                            '[setti] failed to render config.components.notFound, fallback to default:',
-                            err,
-                        )
+                        console.warn('[setti] failed to render config.components.notFound, fallback to default:', err)
                         notFoundHtml = renderToString(
                             createElement(
                                 SettiProvider,
@@ -218,11 +204,11 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                 reply.raw.setHeader('Content-Type', 'text/html; charset=utf-8')
                 reply.raw.end(
                     `<!DOCTYPE html><html><head><meta charset="utf-8"><title>404</title>${notFoundCss}${viteClientScript}</head>` +
-                    `<body><div id="root">${notFoundHtml}</div>` +
-                    `<script>window.__SETTI_SSR__=true</script>` +
-                    middlewareScript +
-                    `<script>window.__SETTI_STATE_STR__=""</script>` +
-                    `${entryScript}</body></html>`,
+                        `<body><div id="root">${notFoundHtml}</div>` +
+                        `<script>window.__SETTI_SSR__=true</script>` +
+                        middlewareScript +
+                        `<script>window.__SETTI_STATE_STR__=""</script>` +
+                        `${entryScript}</body></html>`,
                 )
                 return
             }
@@ -251,12 +237,12 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                 reply.raw.setHeader('Content-Type', 'text/html; charset=utf-8')
                 reply.raw.end(
                     `<!DOCTYPE html><html><head><meta charset="utf-8">` +
-                    `<title>${escapeHtml(route.title)}</title>${cssLinksHtml}${viteClientScript}</head>` +
-                    `<body><div id="root"></div>` +
-                    ssrFlagScript +
-                    middlewareScript +
-                    `<script>window.__SETTI_STATE_STR__=""</script>` +
-                    `${entryScript}</body></html>`,
+                        `<title>${escapeHtml(route.title)}</title>${cssLinksHtml}${viteClientScript}</head>` +
+                        `<body><div id="root"></div>` +
+                        ssrFlagScript +
+                        middlewareScript +
+                        `<script>window.__SETTI_STATE_STR__=""</script>` +
+                        `${entryScript}</body></html>`,
                 )
                 return
             }
@@ -337,11 +323,7 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                     globalStates,
                 )
 
-                const serialized = await serializeState(
-                    prefetchResult.slices,
-                    projectDir,
-                    clientDir,
-                )
+                const serialized = await serializeState(prefetchResult.slices, projectDir, clientDir)
                 serializedStateJson = stringifyState(serialized)
             } catch (err) {
                 reply.raw.statusCode = 500
@@ -355,23 +337,16 @@ export function createSSRHandler(options: SSRHandlerOptions) {
             }
 
             if (process.env.SETTI_DEBUG) {
-                console.log(
-                    `[setti] __SETTI_STATE_STR__ length=${serializedStateJson.length}`,
-                )
+                console.log(`[setti] __SETTI_STATE_STR__ length=${serializedStateJson.length}`)
             }
 
             // Error Boundary с fallback из `config.components.error`.
             let ErrorComponent: ComponentType<{ error: Error }> | undefined
             if (config.components.error) {
                 try {
-                    ErrorComponent = (await loadModule(
-                        config.components.error,
-                    )) as ComponentType<{ error: Error }>
+                    ErrorComponent = (await loadModule(config.components.error)) as ComponentType<{ error: Error }>
                 } catch (err) {
-                    console.warn(
-                        '[setti] failed to load config.components.error, fallback to default:',
-                        err,
-                    )
+                    console.warn('[setti] failed to load config.components.error, fallback to default:', err)
                 }
             }
 
@@ -405,11 +380,7 @@ export function createSSRHandler(options: SSRHandlerOptions) {
             let shellSent = false
 
             const stream = renderToPipeableStream(
-                createElement(
-                    SettiProvider,
-                    { sliceRegistry: sliceRegistry as unknown, router: initialRouter },
-                    tree,
-                ),
+                createElement(SettiProvider, { sliceRegistry: sliceRegistry as unknown, router: initialRouter }, tree),
                 {
                     onShellReady() {
                         if (shellSent) return
@@ -495,28 +466,17 @@ function buildCssLinks(ctx: BuildCssLinksContext): string {
     if (ctx.isDev) {
         const hrefs: string[] = []
         if (ctx.config.css.main) {
-            hrefs.push(
-                resolveVitePath(
-                    ctx.projectDir,
-                    path.resolve(ctx.clientDir, ctx.config.css.main),
-                ),
-            )
+            hrefs.push(resolveVitePath(ctx.projectDir, path.resolve(ctx.clientDir, ctx.config.css.main)))
         }
         if (ctx.route) {
             const directFiles: string[] = []
             const templateRel = ctx.route.contentConfig.workspaceConfig.template.split(':')[0]
             directFiles.push(path.resolve(ctx.clientDir, templateRel))
-            const layoutTypes = ctx.config.layouts
-                ? ctx.route.type
-                    ? [ctx.route.type]
-                    : []
-                : []
+            const layoutTypes = ctx.config.layouts ? (ctx.route.type ? [ctx.route.type] : []) : []
             for (const t of layoutTypes) {
                 const layoutRel = ctx.config.layouts[t]
                 if (layoutRel) {
-                    directFiles.push(
-                        path.resolve(ctx.clientDir, layoutRel.replace(/^\.\//, '')),
-                    )
+                    directFiles.push(path.resolve(ctx.clientDir, layoutRel.replace(/^\.\//, '')))
                 }
             }
             for (const cssPath of collectDirectCssImports(directFiles, ctx.projectDir)) {
@@ -545,8 +505,7 @@ function buildCssLinks(ctx: BuildCssLinksContext): string {
     if (ctx.mode === 'spa') {
         for (const entry of Object.values(mf)) add(entry.css)
     } else if (ctx.route) {
-        const templateRel =
-            ctx.route.contentConfig.workspaceConfig.template.split(':')[0]
+        const templateRel = ctx.route.contentConfig.workspaceConfig.template.split(':')[0]
         const templateAbs = path.resolve(ctx.clientDir, templateRel)
         const templateVitePath = resolveVitePath(ctx.projectDir, templateAbs)
         for (const entry of Object.values(mf)) {
@@ -555,10 +514,7 @@ function buildCssLinks(ctx: BuildCssLinksContext): string {
 
         const layoutRel = ctx.config.layouts[ctx.route.type]
         if (layoutRel) {
-            const layoutAbs = path.resolve(
-                ctx.clientDir,
-                layoutRel.replace(/^\.\//, ''),
-            )
+            const layoutAbs = path.resolve(ctx.clientDir, layoutRel.replace(/^\.\//, ''))
             const layoutVitePath = resolveVitePath(ctx.projectDir, layoutAbs)
             for (const entry of Object.values(mf)) {
                 if (entry.src && entry.src.startsWith(layoutVitePath)) add(entry.css)
@@ -590,10 +546,7 @@ function resolveVitePath(projectDir: string, absPath: string): string {
  * @param projectDir корень проекта.
  * @returns Vite-пути до CSS.
  */
-function collectDirectCssImports(
-    sourceFiles: string[],
-    projectDir: string,
-): string[] {
+function collectDirectCssImports(sourceFiles: string[], projectDir: string): string[] {
     const result = new Set<string>()
     const visited = new Set<string>()
     const MAX_DEPTH = 30
@@ -672,9 +625,5 @@ function queryToObject(url: string): Record<string, string> {
  * @returns экранированная.
  */
 function escapeHtml(s: string): string {
-    return s
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }

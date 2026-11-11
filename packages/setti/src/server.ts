@@ -18,17 +18,10 @@ export { buildManifest } from './manifest'
 export { createSettiServer } from './server/create-server'
 export type { CreateServerOptions, SettiServerMode } from './server/create-server'
 
-export {
-    createDevModuleLoader,
-    createProdModuleLoader,
-} from './server/module-loader'
+export { createDevModuleLoader, createProdModuleLoader } from './server/module-loader'
 
 export { runPrefetch } from './shared/prefetch'
-export type {
-    PrefetchContext,
-    PrefetchResult,
-    PrefetchSliceInfo,
-} from './shared/prefetch'
+export type { PrefetchContext, PrefetchResult, PrefetchSliceInfo } from './shared/prefetch'
 
 export { serializeState, stringifyState } from './server/serialize'
 export type { SerializedState } from './server/serialize'
@@ -50,10 +43,7 @@ export { defineServerRoutes } from './define-server-routes'
 export { defineServerPlugins } from './define-server-plugins'
 export { loadServerRoutes } from './server/server-routes-loader'
 export { loadServerPlugins } from './server/server-plugins-loader'
-export {
-    registerServerPlugins,
-    registerServerRoutes,
-} from './server/api-register'
+export { registerServerPlugins, registerServerRoutes } from './server/api-register'
 export type {
     ApiRouteContext,
     ApiMiddlewareContext,
@@ -62,10 +52,7 @@ export type {
 } from './server/api-register'
 export { loadMiddleware } from './server/middleware-loader'
 export { runServerMiddleware } from './server/run-server-middleware'
-export type {
-    ServerMiddlewareContext,
-    ServerMiddlewareResult,
-} from './server/run-server-middleware'
+export type { ServerMiddlewareContext, ServerMiddlewareResult } from './server/run-server-middleware'
 export { runGlobalPrefetch, runPagePrefetch } from './server/prefetch'
 export type { MiddlewareSide, MiddlewareFn } from './server/middleware-loader'
 export { defineObject } from './define-object'

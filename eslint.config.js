@@ -3,6 +3,8 @@
 import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import jsdoc from 'eslint-plugin-jsdoc'
+import prettier from 'eslint-config-prettier'
+import globals from 'globals'
 
 export default tseslint.config(
     // Базовые наборы правил.
@@ -15,10 +17,7 @@ export default tseslint.config(
         files: ['**/*.ts', '**/*.tsx'],
         rules: {
             // Разрешаем `_unused` в аргументах и переменных (префикс подчёркивания).
-            '@typescript-eslint/no-unused-vars': [
-                'error',
-                { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-            ],
+            '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
 
             // JSDoc обязателен на всех объявленных функциях и типах.
             // Один блок с contexts — второй блок был дубликатом и ломал ESLint.
@@ -47,7 +46,16 @@ export default tseslint.config(
             'jsdoc/check-param-names': ['warn', { checkDestructured: false }],
         },
     },
-
+    {
+        files: ['**/*.mjs', '**/bin/**'],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+                ...globals.es2022,
+            },
+        },
+    },
+    prettier,
     // Игнорируем артефакты и внешние каталоги.
     {
         ignores: ['**/dist/**', '**/node_modules/**', '**/*.d.ts'],

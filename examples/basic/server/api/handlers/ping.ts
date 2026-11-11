@@ -7,9 +7,6 @@ import type { ApiRouteContext } from 'setti/server'
  * @param ctx контекст Fastify.
  * @returns объект с текущим временем.
  */
-export async function ping(
-    _params: Record<string, unknown>,
-    ctx: ApiRouteContext,
-): Promise<unknown> {
+export async function ping(_params: Record<string, unknown>, ctx: ApiRouteContext): Promise<unknown> {
     return { ok: true, method: ctx.request.method, time: Date.now() }
 }

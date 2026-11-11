@@ -37,25 +37,20 @@ export async function runServerMiddleware(
     ctx: ServerMiddlewareContext,
     projectDir: string,
 ): Promise<ServerMiddlewareResult> {
-    const chain = [...globalMiddleware, ...(route.middleware ?? [])].filter(
-        (def) => {
-            // Явный side: client → пропускаем.
-            if (def.side === 'client') return false
-            // Явный side: server / both → оставляем.
-            if (def.side === 'server' || def.side === 'both') return true
-            // side не задан — определяем по пути: client/* → client-only.
-            if (def.handler.startsWith('client/')) return false
-            return true
-        },
-    )
+    const chain = [...globalMiddleware, ...(route.middleware ?? [])].filter((def) => {
+        // Явный side: client → пропускаем.
+        if (def.side === 'client') return false
+        // Явный side: server / both → оставляем.
+        if (def.side === 'server' || def.side === 'both') return true
+        // side не задан — определяем по пути: client/* → client-only.
+        if (def.handler.startsWith('client/')) return false
+        return true
+    })
 
     for (const def of chain) {
         const fn = await loadMiddleware(def, projectDir, 'server')
         const result = await (
-            fn as (
-                params: Record<string, unknown>,
-                ctx: ServerMiddlewareContext,
-            ) => Promise<ServerMiddlewareResult>
+            fn as (params: Record<string, unknown>, ctx: ServerMiddlewareContext) => Promise<ServerMiddlewareResult>
         )(def.params ?? {}, ctx)
         if (result && typeof result === 'object' && 'redirect' in result) {
             return result

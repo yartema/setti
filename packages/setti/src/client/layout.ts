@@ -23,15 +23,8 @@ export function Outlet(): ReactNode {
  * @param props.children сам layout (передаётся как React children).
  * @returns элемент-обёртка.
  */
-export function OutletProvider(props: {
-    content: ReactNode
-    children?: ReactNode
-}): ReactNode {
-    return createElement(
-        OutletContext.Provider,
-        { value: props.content },
-        props.children,
-    )
+export function OutletProvider(props: { content: ReactNode; children?: ReactNode }): ReactNode {
+    return createElement(OutletContext.Provider, { value: props.content }, props.children)
 }
 
 /**
@@ -44,18 +37,11 @@ export function OutletProvider(props: {
  * @param layouts цепочка layouts (root → leaf).
  * @returns вложенный ReactNode.
  */
-export function renderLayoutChain(
-    page: ReactNode,
-    layouts: ComponentType[],
-): ReactNode {
+export function renderLayoutChain(page: ReactNode, layouts: ComponentType[]): ReactNode {
     let node = page
     for (let i = layouts.length - 1; i >= 0; i--) {
         const Layout = layouts[i]
-        node = createElement(
-            OutletProvider,
-            { content: node },
-            createElement(Layout, null, node),
-        )
+        node = createElement(OutletProvider, { content: node }, createElement(Layout, null, node))
     }
     return node
 }

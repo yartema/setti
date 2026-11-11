@@ -1,13 +1,5 @@
 import type { JSX, ReactNode } from 'react'
-import {
-    useSlice,
-    useStrictSlice,
-    usePathname,
-    useQuery,
-    useParams,
-    useRouter,
-    Link,
-} from 'setti/client'
+import { useSlice, useStrictSlice, usePathname, useQuery, useParams, useRouter, Link } from 'setti/client'
 import type { UserInfoSlice } from '../User/loaders/userInfo'
 import type { StatsSlice } from './Factories/stats'
 import './view.css'
@@ -37,9 +29,7 @@ export function View(): JSX.Element {
         <div className="space-y-6">
             <section>
                 <h1 className="text-4xl font-bold tracking-tight text-slate-900">About</h1>
-                <p className="mt-2 text-slate-600">
-                    Демонстрация query-навигации, tabs и второго page-слайса.
-                </p>
+                <p className="mt-2 text-slate-600">Демонстрация query-навигации, tabs и второго page-слайса.</p>
             </section>
 
             <div className="flex gap-2 border-b border-slate-200">
@@ -72,9 +62,7 @@ export function View(): JSX.Element {
                                 </li>
                                 <li>
                                     стек:{' '}
-                                    <span className="font-mono text-sm">
-                    {stats.getState().frameworks.join(' · ')}
-                  </span>
+                                    <span className="font-mono text-sm">{stats.getState().frameworks.join(' · ')}</span>
                                 </li>
                             </ul>
                         ) : (
@@ -194,8 +182,8 @@ function Card(props: CardProps): JSX.Element {
                 <h2 className="font-semibold text-slate-900">{props.title}</h2>
                 {props.badge && (
                     <span className="rounded bg-indigo-50 px-2 py-0.5 text-xs font-mono text-indigo-700">
-            {props.badge}
-          </span>
+                        {props.badge}
+                    </span>
                 )}
             </div>
             {props.children}

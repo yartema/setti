@@ -1,10 +1,7 @@
 import type { ServiceCacheEntry } from '../../types'
 
 /** Изоморфный исполнитель. */
-export type Executor = (
-    payload: string,
-    headers: Record<string, string>,
-) => Promise<Response>
+export type Executor = (payload: string, headers: Record<string, string>) => Promise<Response>
 
 /**
  * Определяет, выполняется ли код на сервере.
@@ -54,9 +51,7 @@ export function getServerCache(): Map<string, ServiceCacheEntry> | null {
     if (!isServer()) return null
     const getCtx = (
         globalThis as unknown as {
-            __settiRpcGetContext?: () =>
-                | { cache?: Map<string, ServiceCacheEntry> }
-                | undefined
+            __settiRpcGetContext?: () => { cache?: Map<string, ServiceCacheEntry> } | undefined
         }
     ).__settiRpcGetContext
     return getCtx?.()?.cache ?? null

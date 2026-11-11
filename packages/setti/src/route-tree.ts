@@ -1,6 +1,6 @@
 import { SettiError } from './errors'
 import { compileRoute, computePath } from './url'
-import type { CompiledRoute, SettiRoute, ResolvedSettiConfig, RouteTree } from './types'
+import type { CompiledRoute, MiddlewareDef, ResolvedSettiConfig, RouteTree, SettiRoute } from './types'
 
 /**
  * Строит и валидирует дерево маршрутов из результата сканирования.
@@ -30,9 +30,7 @@ export function buildRouteTree(
     for (const { routes } of routeModules) {
         for (const route of routes) {
             if (byId.has(route.id)) {
-                throw new SettiError(
-                    `Duplicate route id "${route.id}" (found in multiple router.ts files)`,
-                )
+                throw new SettiError(`Duplicate route id "${route.id}" (found in multiple router.ts files)`)
             }
             byId.set(route.id, route)
             allRoutes.push(route)
@@ -42,9 +40,7 @@ export function buildRouteTree(
     // 2. Проверка parentId.
     for (const route of allRoutes) {
         if (route.parentId && !byId.has(route.parentId)) {
-            throw new SettiError(
-                `Route "${route.id}" references unknown parentId "${route.parentId}"`,
-            )
+            throw new SettiError(`Route "${route.id}" references unknown parentId "${route.parentId}"`)
         }
     }
 
@@ -77,7 +73,7 @@ export function buildRouteTree(
         if (!layoutKeys.has(route.type)) {
             throw new SettiError(
                 `Route "${route.id}" uses unknown layout type "${route.type}". ` +
-                `Available: ${[...layoutKeys].join(', ') || '(none)'}`,
+                    `Available: ${[...layoutKeys].join(', ') || '(none)'}`,
             )
         }
     }
@@ -98,6 +94,47 @@ export function buildRouteTree(
         }
     }
 
+    // 6.5. Наследование middleware по parentId.
+    //      `middleware: []` у ребёнка — отключает наследование.
+    //      После этого у КАЖДОГО маршрута `middleware` — массив (возможно пустой).
+    //
+    //      ВАЖНО: сначала делаем снимок ЛОКАЛЬНЫХ middleware каждого маршрута
+    //      (`localMw`). Иначе при обходе в цикле `ancestor.middleware` будет уже
+    //      наследованным (двойное наследование: leaf получит authMw дважды —
+    //      от root и от mid, где mid уже унаследовал от root).
+    const localMw = new Map<string, MiddlewareDef[] | undefined>()
+    for (const route of allRoutes) {
+        localMw.set(route.id, route.middleware ? [...route.middleware] : undefined)
+    }
+
+    for (const route of allRoutes) {
+        const local = localMw.get(route.id)
+
+        // Явный пустой массив — отключает наследование.
+        if (local !== undefined && local.length === 0) {
+            route.middleware = []
+            continue
+        }
+
+        // Собираем цепочку предков root → parent (по `localMw`, не по мутированному).
+        const stack: SettiRoute[] = []
+        let cursor = route.parentId ? byId.get(route.parentId) : undefined
+        while (cursor) {
+            stack.unshift(cursor)
+            cursor = cursor.parentId ? byId.get(cursor.parentId) : undefined
+        }
+
+        // Наследуем ЛОКАЛЬНЫЕ middleware предков + свои локальные.
+        const inherited: MiddlewareDef[] = []
+        for (const ancestor of stack) {
+            const ancestorLocal = localMw.get(ancestor.id)
+            if (ancestorLocal) inherited.push(...ancestorLocal)
+        }
+        if (local) inherited.push(...local)
+
+        route.middleware = inherited
+    }
+
     // 7. Пути + компиляция + валидация.
     const paths = new Map<string, string>()
     const compiled: CompiledRoute[] = []
@@ -105,9 +142,7 @@ export function buildRouteTree(
 
     for (const route of allRoutes) {
         if (route.path && route.slug) {
-            throw new SettiError(
-                `Route "${route.id}" cannot have both "path" and "slug" (mutually exclusive)`,
-            )
+            throw new SettiError(`Route "${route.id}" cannot have both "path" and "slug" (mutually exclusive)`)
         }
 
         const pattern = computePath(route, byId)
@@ -124,9 +159,7 @@ export function buildRouteTree(
         try {
             compiledPat = compileRoute(route, byId)
         } catch (err) {
-            throw new SettiError(
-                `Invalid route "${route.id}": ${(err as Error).message}`,
-            )
+            throw new SettiError(`Invalid route "${route.id}": ${(err as Error).message}`)
         }
 
         if (seenPatterns.has(compiledPat.regexSource)) {
@@ -151,9 +184,7 @@ export function buildRouteTree(
     for (const c of compiled) {
         const existing = regexSeen.get(c.regexSource)
         if (existing) {
-            throw new SettiError(
-                `Ambiguous URL regex "${c.regexSource}" for routes "${existing}" and "${c.id}"`,
-            )
+            throw new SettiError(`Ambiguous URL regex "${c.regexSource}" for routes "${existing}" and "${c.id}"`)
         }
         regexSeen.set(c.regexSource, c.id)
     }
@@ -166,8 +197,7 @@ export function buildRouteTree(
 
         if (route.index === true && route.ssr === false) {
             throw new SettiError(
-                `Route "${route.id}": "index: true" cannot have "ssr: false" ` +
-                `(index page must be SSR)`,
+                `Route "${route.id}": "index: true" cannot have "ssr: false" ` + `(index page must be SSR)`,
             )
         }
 

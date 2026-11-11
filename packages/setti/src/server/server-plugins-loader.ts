@@ -15,10 +15,7 @@ import type { ServerPluginDef, ServerPluginsOptions } from '../types'
  * @param pluginsDir путь из конфига (относительно `projectDir`).
  * @returns массив `{ name, path }` (path — абсолютный).
  */
-export async function loadServerPlugins(
-    projectDir: string,
-    pluginsDir: string,
-): Promise<ServerPluginDef[]> {
+export async function loadServerPlugins(projectDir: string, pluginsDir: string): Promise<ServerPluginDef[]> {
     const abs = path.resolve(projectDir, pluginsDir)
 
     let entries: import('node:fs').Dirent[]
@@ -36,9 +33,7 @@ export async function loadServerPlugins(
         const indexPath = path.join(abs, indexName)
         try {
             const jiti = createJiti(import.meta.url, { interopDefault: true })
-            const idxMod = (await jiti.import(indexPath, { default: true })) as
-                | ServerPluginsOptions
-                | undefined
+            const idxMod = (await jiti.import(indexPath, { default: true })) as ServerPluginsOptions | undefined
             if (idxMod && Array.isArray(idxMod.order)) order = idxMod.order
             break
         } catch {

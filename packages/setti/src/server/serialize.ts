@@ -60,8 +60,7 @@ async function resolveModulePath(
     for (const ext of ['.tsx', '.ts', '.jsx', '.js', '']) {
         const abs = absBase + ext
         if (await fileExists(abs)) {
-            const fromRoot =
-                '/' + path.relative(projectDir, abs).replace(/\\/g, '/')
+            const fromRoot = '/' + path.relative(projectDir, abs).replace(/\\/g, '/')
             return { modulePath: fromRoot, exportName }
         }
     }
@@ -84,11 +83,7 @@ export async function serializeState(
     const out: SerializedState = { version: 1, slices: {} }
 
     for (const [name, info] of slices) {
-        const { modulePath, exportName } = await resolveModulePath(
-            projectDir,
-            clientDir,
-            info.dataFactoryName,
-        )
+        const { modulePath, exportName } = await resolveModulePath(projectDir, clientDir, info.dataFactoryName)
         out.slices[name] = {
             modulePath,
             exportName,
@@ -118,8 +113,6 @@ export function stringifyState(state: SerializedState): string {
     try {
         return devalueStringify(state).replace(/</g, '\\u003c')
     } catch (err) {
-        throw new Error(
-            `Failed to serialize __SETTI_STATE__ (devalue): ${(err as Error).message}`,
-        )
+        throw new Error(`Failed to serialize __SETTI_STATE__ (devalue): ${(err as Error).message}`)
     }
 }

@@ -19,12 +19,8 @@ export interface RpcHandlerOptions {
 export function createRpcHandler(options: RpcHandlerOptions) {
     const { registry, config } = options
 
-    return async function handler(
-        req: FastifyRequest,
-        reply: FastifyReply,
-    ): Promise<void> {
-        const requestId =
-            (req.headers['x-request-id'] as string | undefined) ?? randomUUID()
+    return async function handler(req: FastifyRequest, reply: FastifyReply): Promise<void> {
+        const requestId = (req.headers['x-request-id'] as string | undefined) ?? randomUUID()
         reply.header('X-Request-Id', requestId)
 
         let extension: Record<string, unknown> = {}

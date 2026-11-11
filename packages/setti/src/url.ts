@@ -39,10 +39,7 @@ function idSegments(route: SettiRoute, byId: Map<string, SettiRoute>): string[] 
  * @param byId карта.
  * @returns паттерн.
  */
-export function computePath(
-    route: SettiRoute,
-    byId: Map<string, SettiRoute>,
-): string {
+export function computePath(route: SettiRoute, byId: Map<string, SettiRoute>): string {
     if (route.path) return route.path
 
     const segments = idSegments(route, byId)
@@ -69,7 +66,7 @@ export function computePath(
  * @returns `regexSource` и `paramNames`.
  * @throws {Error} при невалидном паттерне.
  */
-function compilePath(pattern: string): {
+export function compilePath(pattern: string): {
     regexSource: string
     paramNames: string[]
 } {
@@ -125,9 +122,7 @@ export function compileRoute(
             if (s.startsWith('/regex:')) {
                 const body = s.slice('/regex:'.length)
                 if (!body) {
-                    throw new Error(
-                        `Empty regex in slug for route "${route.id}": "${s}"`,
-                    )
+                    throw new Error(`Empty regex in slug for route "${route.id}": "${s}"`)
                 }
                 parts.push(`(${body})`)
                 paramNames.push(ri === 0 ? 'slug' : `slug${ri}`)
@@ -135,9 +130,7 @@ export function compileRoute(
             } else if (s.startsWith(':')) {
                 const name = s.slice(1)
                 if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-                    throw new Error(
-                        `Invalid param name "${name}" in slug for route "${route.id}"`,
-                    )
+                    throw new Error(`Invalid param name "${name}" in slug for route "${route.id}"`)
                 }
                 parts.push('([^/]+)')
                 paramNames.push(name)

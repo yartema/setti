@@ -19,11 +19,7 @@ import type { Manifest, ManifestEntry, ModuleKind, ResolvedSettiConfig, ScanResu
  * @param clientDir абсолютный путь до клиентского каталога.
  * @returns манифест.
  */
-export function buildManifest(
-    scan: ScanResult,
-    config: ResolvedSettiConfig,
-    clientDir: string,
-): Manifest {
+export function buildManifest(scan: ScanResult, config: ResolvedSettiConfig, clientDir: string): Manifest {
     const modules: Record<string, ManifestEntry> = {}
 
     /**

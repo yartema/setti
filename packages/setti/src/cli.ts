@@ -24,11 +24,7 @@ async function prepare(cwd: string) {
     const config = await loadConfig(cwd)
     const clientDir = path.resolve(cwd, config.clientDir)
     const scanResult = await scan(clientDir)
-    const routeTree = buildRouteTree(
-        scanResult.routeModules,
-        scanResult.loaderModules,
-        config,
-    )
+    const routeTree = buildRouteTree(scanResult.routeModules, scanResult.loaderModules, config)
     const manifest = buildManifest(scanResult, config, clientDir)
     __initResolver({ clientDir })
 
@@ -38,21 +34,14 @@ async function prepare(cwd: string) {
         for (const [name, def] of Object.entries(map)) {
             const existing = sources.get(name)
             if (existing) {
-                throw new SettiError(
-                    `Global loader "${name}" declared in both "${existing}" and "${file}" (A3)`,
-                )
+                throw new SettiError(`Global loader "${name}" declared in both "${existing}" and "${file}" (A3)`)
             }
             globalRegistry[name] = def
             sources.set(name, file)
         }
     }
 
-    const factoryModules = await collectFactoryModules(
-        cwd,
-        routeTree,
-        scanResult,
-        clientDir,
-    )
+    const factoryModules = await collectFactoryModules(cwd, routeTree, scanResult, clientDir)
 
     // RPC-реестр (если RPC включён).
     const serverDir = path.resolve(cwd, config.serverDir)
@@ -124,9 +113,7 @@ async function dev(): Promise<void> {
         port: prepared.config.server.port,
         host: prepared.config.server.host,
     })
-    console.log(
-        `\nsetti dev: http://${prepared.config.server.host}:${prepared.config.server.port}\n`,
-    )
+    console.log(`\nsetti dev: http://${prepared.config.server.host}:${prepared.config.server.port}\n`)
 }
 
 /** Команда `setti build`. */
@@ -164,9 +151,7 @@ async function start(): Promise<void> {
         port: prepared.config.server.port,
         host: prepared.config.server.host,
     })
-    console.log(
-        `\nsetti start: http://${prepared.config.server.host}:${prepared.config.server.port}\n`,
-    )
+    console.log(`\nsetti start: http://${prepared.config.server.host}:${prepared.config.server.port}\n`)
 }
 
 /** Точка входа CLI. */

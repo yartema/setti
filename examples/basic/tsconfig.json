@@ -1,17 +1,11 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "paths": {
-      "setti": ["./node_modules/setti/src/index.ts"],
-      "setti/server": ["./node_modules/setti/src/server.ts"],
-      "setti/client": ["./node_modules/setti/src/client/index.ts"]
-    }
-  },
-  "include": [
-    "client/**/*.ts",
-    "client/**/*.tsx",
-    "server/**/*.ts",
-    "server/**/*.tsx",
-    "setti.config.ts"
-  ]
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "paths": {
+            "setti": ["./node_modules/setti/src/index.ts"],
+            "setti/server": ["./node_modules/setti/src/server.ts"],
+            "setti/client": ["./node_modules/setti/src/client/index.ts"]
+        }
+    },
+    "include": ["client/**/*.ts", "client/**/*.tsx", "server/**/*.ts", "server/**/*.tsx", "setti.config.ts"]
 }

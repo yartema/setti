@@ -77,11 +77,7 @@ export async function processOne(
 
     const method = registry.getMethod(reqObj.method)
     if (!method || method.method.internal) {
-        return errorResponse(
-            id,
-            ERROR_CODES.METHOD_NOT_FOUND,
-            `Method "${reqObj.method}" not found`,
-        )
+        return errorResponse(id, ERROR_CODES.METHOD_NOT_FOUND, `Method "${reqObj.method}" not found`)
     }
 
     const authFail = checkAuth(method.method, extension)
@@ -94,21 +90,11 @@ export async function processOne(
         try {
             const result = await method.method.params['~standard'].validate(reqObj.params)
             if ('issues' in result && result.issues) {
-                return errorResponse(
-                    id,
-                    ERROR_CODES.INVALID_PARAMS,
-                    'Invalid params',
-                    result.issues,
-                )
+                return errorResponse(id, ERROR_CODES.INVALID_PARAMS, 'Invalid params', result.issues)
             }
             params = (result as { value: unknown }).value
         } catch (err) {
-            return errorResponse(
-                id,
-                ERROR_CODES.INVALID_PARAMS,
-                'Invalid params',
-                (err as Error).message,
-            )
+            return errorResponse(id, ERROR_CODES.INVALID_PARAMS, 'Invalid params', (err as Error).message)
         }
     }
 
@@ -126,9 +112,7 @@ export async function processOne(
         if (target.method.params) {
             const result = await target.method.params['~standard'].validate(p)
             if ('issues' in result && result.issues) {
-                throw new SettiError(
-                    `Invalid params for "${m}": ${JSON.stringify(result.issues)}`,
-                )
+                throw new SettiError(`Invalid params for "${m}": ${JSON.stringify(result.issues)}`)
             }
             localParams = (result as { value: unknown }).value
         }
@@ -146,13 +130,7 @@ export async function processOne(
     } catch (err) {
         console.error(`[setti] RPC ${reqObj.method} error:`, err)
         const e = err as { message?: string; detail?: string }
-        return errorResponse(
-            id,
-            ERROR_CODES.INTERNAL_ERROR,
-            'Internal error',
-            e.message,
-            e.detail,
-        )
+        return errorResponse(id, ERROR_CODES.INTERNAL_ERROR, 'Internal error', e.message, e.detail)
     }
 }
 
@@ -184,9 +162,7 @@ export async function processBody(
 
     const responses: JsonRpcResponse[] = []
     for (let i = 0; i < rawRequests.length; i++) {
-        responses.push(
-            await processOne(rawRequests[i], i + 1, registry, requestId, extension),
-        )
+        responses.push(await processOne(rawRequests[i], i + 1, registry, requestId, extension))
     }
     return isBatch ? responses : responses[0]
 }
@@ -198,10 +174,7 @@ export async function processBody(
  * @param extension контекст.
  * @returns сообщение об ошибке или `null`.
  */
-function checkAuth(
-    method: RpcMethodDefinition<unknown, unknown>,
-    extension: Record<string, unknown>,
-): string | null {
+function checkAuth(method: RpcMethodDefinition<unknown, unknown>, extension: Record<string, unknown>): string | null {
     if (!method.auth) return null
     const user = extension.user
     if (!user) return 'Unauthorized: user required'
@@ -226,13 +199,7 @@ function checkAuth(
  * @param detail дополнительное описание.
  * @returns ответ.
  */
-function errorResponse(
-    id: JsonRpcId,
-    code: number,
-    message: string,
-    data?: unknown,
-    detail?: string,
-): JsonRpcResponse {
+function errorResponse(id: JsonRpcId, code: number, message: string, data?: unknown, detail?: string): JsonRpcResponse {
     const error: JsonRpcError = { code, message }
     if (detail !== undefined) error.detail = detail
     if (data !== undefined) error.data = data

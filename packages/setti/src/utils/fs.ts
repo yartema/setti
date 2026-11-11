@@ -24,10 +24,7 @@ export async function fileExists(filePath: string): Promise<boolean> {
  * @param dir стартовый каталог.
  * @param onFile колбэк для каждого файла (абсолютный путь).
  */
-export async function walkFiles(
-    dir: string,
-    onFile: (filePath: string) => Promise<void> | void,
-): Promise<void> {
+export async function walkFiles(dir: string, onFile: (filePath: string) => Promise<void> | void): Promise<void> {
     const entries = await fs.readdir(dir, { withFileTypes: true })
     for (const entry of entries) {
         // Пропускаем node_modules и прочий шум.

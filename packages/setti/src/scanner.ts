@@ -30,9 +30,7 @@ export async function scan(clientDir: string): Promise<ScanResult> {
     try {
         topLevelEntries = await fs.readdir(clientDir, { withFileTypes: true })
     } catch (err) {
-        throw new SettiError(
-            `Failed to read clientDir "${clientDir}": ${(err as Error).message}`,
-        )
+        throw new SettiError(`Failed to read clientDir "${clientDir}": ${(err as Error).message}`)
     }
 
     for (const entry of topLevelEntries) {
@@ -43,16 +41,12 @@ export async function scan(clientDir: string): Promise<ScanResult> {
         const mod = (await jiti.import(routerPath)) as Record<string, unknown>
         const routes = mod.default
         if (!Array.isArray(routes)) {
-            throw new SettiError(
-                `router.ts at "${routerPath}" must default-export an array (use defineRoute([...]))`,
-            )
+            throw new SettiError(`router.ts at "${routerPath}" must default-export an array (use defineRoute([...]))`)
         }
         // Проверяем, что элементы похожи на SettiRoute — минимум обязательных полей.
         for (const [i, route] of routes.entries()) {
             if (!route || typeof route !== 'object' || typeof (route as SettiRoute).id !== 'string') {
-                throw new SettiError(
-                    `Invalid route at index ${i} in "${routerPath}": missing "id"`,
-                )
+                throw new SettiError(`Invalid route at index ${i} in "${routerPath}": missing "id"`)
             }
         }
         routeModules.push({ file: routerPath, routes: routes as SettiRoute[] })
@@ -64,9 +58,7 @@ export async function scan(clientDir: string): Promise<ScanResult> {
         const mod = (await jiti.import(file)) as Record<string, unknown>
         const map = mod.default
         if (!map || typeof map !== 'object') {
-            throw new SettiError(
-                `Loader file "${file}" must default-export a factory map (defineGlobalLoader({...}))`,
-            )
+            throw new SettiError(`Loader file "${file}" must default-export a factory map (defineGlobalLoader({...}))`)
         }
         loaderModules.push({ file, map: map as FactoryMap })
     })

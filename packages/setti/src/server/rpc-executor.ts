@@ -12,10 +12,7 @@ import { processBody } from './rpc/process'
  * @param config нормализованный конфиг.
  * @returns `(payload, headers) => Promise<Response>`.
  */
-export function createRpcExecutor(
-    registry: RpcRegistry,
-    config: ResolvedSettiConfig,
-): RpcExecutor {
+export function createRpcExecutor(registry: RpcRegistry, config: ResolvedSettiConfig): RpcExecutor {
     return async (payload: string, headers: Record<string, string>) => {
         const requestId = headers['x-request-id'] ?? randomUUID()
         const body = JSON.parse(payload)

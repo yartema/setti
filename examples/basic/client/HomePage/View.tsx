@@ -1,12 +1,6 @@
 import { useState, type JSX, type ReactNode } from 'react'
 import { Button } from '../shared/Button'
-import {
-    useSlice,
-    useStrictSlice,
-    usePathname,
-    useRouter,
-    Link,
-} from 'setti/client'
+import { useSlice, useStrictSlice, usePathname, useRouter, Link } from 'setti/client'
 import type { UserListSlice } from './Factories/usersList'
 import type { UserInfoSlice } from '../User/loaders/userInfo'
 import { SettiService } from 'setti'
@@ -62,12 +56,8 @@ export function View(): JSX.Element {
     return (
         <div className="space-y-8">
             <section>
-                <h1 className="text-4xl font-bold tracking-tight text-slate-900">
-                    setti demo
-                </h1>
-                <p className="mt-2 text-slate-600">
-                    React 19 · Fastify · Vite · SSR + SPA · Tailwind
-                </p>
+                <h1 className="text-4xl font-bold tracking-tight text-slate-900">setti demo</h1>
+                <p className="mt-2 text-slate-600">React 19 · Fastify · Vite · SSR + SPA · Tailwind</p>
             </section>
 
             <div className="grid gap-5 md:grid-cols-2">
@@ -77,36 +67,24 @@ export function View(): JSX.Element {
                             👤
                         </div>
                         <div>
-                            <p className="font-medium text-slate-900">
-                                {userState?.name ?? 'anonymous'}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                                id: {userState?.id ?? '—'}
-                            </p>
+                            <p className="font-medium text-slate-900">{userState?.name ?? 'anonymous'}</p>
+                            <p className="text-sm text-slate-500">id: {userState?.id ?? '—'}</p>
                             {userState && (
                                 <p className="mt-1 text-xs text-slate-500">
-                                    Map (permissions):{' '}
-                                    {userState.permissions instanceof Map ? '✓ Map' : '✗ not Map'}{' '}
-                                    ({userState.permissions?.size ?? 0} items)
+                                    Map (permissions): {userState.permissions instanceof Map ? '✓ Map' : '✗ not Map'} (
+                                    {userState.permissions?.size ?? 0} items)
                                     <br />
-                                    Date (createdAt):{' '}
-                                    {userState.createdAt instanceof Date ? '✓ Date' : '✗ not Date'}
+                                    Date (createdAt): {userState.createdAt instanceof Date ? '✓ Date' : '✗ not Date'}
                                 </p>
                             )}
                         </div>
                     </div>
                 </Card>
 
-                <Card
-                    title="UserList"
-                    badge="useSlice"
-                    badgeHint="page · may be undefined"
-                >
+                <Card title="UserList" badge="useSlice" badgeHint="page · may be undefined">
                     {listState ? (
                         <div>
-                            <p className="text-sm text-slate-500">
-                                {listState.total} users, перезагрузить:
-                            </p>
+                            <p className="text-sm text-slate-500">{listState.total} users, перезагрузить:</p>
                             <button
                                 onClick={() => listState.reload()}
                                 className="mt-2 rounded-md bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-200"
@@ -119,8 +97,8 @@ export function View(): JSX.Element {
                                         key={u.id}
                                         className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-600"
                                     >
-                    #{u.id}
-                  </span>
+                                        #{u.id}
+                                    </span>
                                 ))}
                             </div>
                         </div>
@@ -223,13 +201,11 @@ function Card(props: CardProps): JSX.Element {
                 <h2 className="font-semibold text-slate-900">{props.title}</h2>
                 {props.badge && (
                     <span className="rounded bg-indigo-50 px-2 py-0.5 text-xs font-mono text-indigo-700">
-            {props.badge}
-          </span>
+                        {props.badge}
+                    </span>
                 )}
             </div>
-            {props.badgeHint && (
-                <p className="mb-3 text-xs text-slate-400">{props.badgeHint}</p>
-            )}
+            {props.badgeHint && <p className="mb-3 text-xs text-slate-400">{props.badgeHint}</p>}
             {props.children}
         </section>
     )

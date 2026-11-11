@@ -41,8 +41,8 @@ export function Link(props: LinkProps): ReactNode {
             },
             onMouseEnter: prefetch
                 ? () => {
-                    void router.prefetch(href)
-                }
+                      void router.prefetch(href)
+                  }
                 : undefined,
         },
         children,

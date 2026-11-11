@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+*.tgz
+
+# Caches
+.vite/
+.cache/
+.turbo/
+
+# Lockfiles
+pnpm-lock.yaml
+
+# Generated
+packages/setti/README.md
+packages/setti/dist/
+
+# Docs (если не хочешь форматировать)
+# docs/
+
+# Env
+.env*
+!.env.example
+
+# Logs
+*.log

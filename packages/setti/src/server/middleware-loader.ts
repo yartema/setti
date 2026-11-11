@@ -8,10 +8,7 @@ import type { MiddlewareDef } from '../types'
 export type MiddlewareSide = 'client' | 'server'
 
 /** Функция-middleware (универсальная для client/server). */
-export type MiddlewareFn = (
-    params: Record<string, unknown>,
-    ctx: unknown,
-) => Promise<unknown>
+export type MiddlewareFn = (params: Record<string, unknown>, ctx: unknown) => Promise<unknown>
 
 /**
  * Резолвит `MiddlewareDef.handler` в функцию.
@@ -42,9 +39,7 @@ export async function loadMiddleware(
         }
     }
     if (!abs) {
-        throw new SettiError(
-            `Middleware "${def.id}" not found: ${def.handler} (resolved from ${base})`,
-        )
+        throw new SettiError(`Middleware "${def.id}" not found: ${def.handler} (resolved from ${base})`)
     }
 
     const jiti = createJiti(import.meta.url, { interopDefault: true, jsx: true })

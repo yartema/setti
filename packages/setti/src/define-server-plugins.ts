@@ -16,8 +16,6 @@ import type { ServerPluginsOptions } from './types'
  * })
  * ```
  */
-export function defineServerPlugins(
-    options: ServerPluginsOptions,
-): ServerPluginsOptions {
+export function defineServerPlugins(options: ServerPluginsOptions): ServerPluginsOptions {
     return options
 }

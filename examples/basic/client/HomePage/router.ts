@@ -11,9 +11,7 @@ export default defineRoute([
         title: 'Главная',
         description: 'Демо-страница setti',
         type: 'main',
-        middleware: [
-            { id: 'auth', handler: 'client/middleware/auth' },
-        ],
+        middleware: [{ id: 'auth', handler: 'client/middleware/auth' }],
         contentConfig: {
             workspaceConfig: {
                 template: 'HomePage/view:View',

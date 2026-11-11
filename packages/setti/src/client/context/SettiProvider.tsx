@@ -1,11 +1,4 @@
-import {
-    createContext,
-    createElement,
-    useContext,
-    useMemo,
-    type PropsWithChildren,
-    type ReactNode,
-} from 'react'
+import { createContext, createElement, useContext, useMemo, type PropsWithChildren, type ReactNode } from 'react'
 import { SettiError } from '../../errors'
 import type { SliceRegistry } from '../slices/SliceRegistry'
 import type { SettiClientRouter } from '../../types'

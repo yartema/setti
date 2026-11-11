@@ -1,8 +1,4 @@
-import type {
-    CrudOp,
-    IBinding,
-    ServiceOptions,
-} from '../../types'
+import type { CrudOp, IBinding, ServiceOptions } from '../../types'
 
 /**
  * Базовый класс для CRUD-обёрток над JSON-RPC.

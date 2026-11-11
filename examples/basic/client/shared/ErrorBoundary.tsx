@@ -15,9 +15,7 @@ interface ErrorBoundaryProps {
 export function ErrorBoundary(props: ErrorBoundaryProps): JSX.Element {
     return (
         <div className="rounded-xl border border-red-300 bg-red-50 p-5">
-            <h2 className="text-lg font-semibold text-red-700">
-                Что-то пошло не так
-            </h2>
+            <h2 className="text-lg font-semibold text-red-700">Что-то пошло не так</h2>
             <p className="mt-1 text-sm text-red-600">{props.error.message}</p>
             <button
                 onClick={() => window.location.reload()}

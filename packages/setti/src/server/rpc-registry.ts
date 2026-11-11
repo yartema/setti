@@ -48,9 +48,7 @@ export class RpcRegistry {
      */
     add(obj: RpcObjectDefinition): void {
         if (!NAME_RE.test(obj.name)) {
-            throw new SettiError(
-                `Invalid RPC object name "${obj.name}": must match [A-Za-z][A-Za-z0-9_]*`,
-            )
+            throw new SettiError(`Invalid RPC object name "${obj.name}": must match [A-Za-z][A-Za-z0-9_]*`)
         }
         if (this.objects.has(obj.name)) {
             throw new SettiError(`Duplicate RPC object "${obj.name}"`)
@@ -65,9 +63,7 @@ export class RpcRegistry {
                 )
             }
             if (typeof method.handler !== 'function') {
-                throw new SettiError(
-                    `RPC method "${obj.name}.${methodName}": handler is not a function`,
-                )
+                throw new SettiError(`RPC method "${obj.name}.${methodName}": handler is not a function`)
             }
             const fullName = `${obj.name}.${methodName}`
             if (this.methods.has(fullName)) {

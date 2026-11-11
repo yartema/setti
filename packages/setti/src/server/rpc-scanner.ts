@@ -42,9 +42,7 @@ async function collectMetaFiles(dir: string): Promise<string[]> {
  * @returns массив определений.
  * @throws {SettiError} если структура файла невалидна.
  */
-export async function scanRpcObjects(
-    serverDir: string,
-): Promise<RpcObjectDefinition[]> {
+export async function scanRpcObjects(serverDir: string): Promise<RpcObjectDefinition[]> {
     const files = await collectMetaFiles(serverDir)
     if (files.length === 0) return []
 
@@ -56,9 +54,7 @@ export async function scanRpcObjects(
         const def = mod.default
 
         if (!def || typeof def !== 'object') {
-            throw new SettiError(
-                `RPC meta file "${abs}" must default-export defineObject({...})`,
-            )
+            throw new SettiError(`RPC meta file "${abs}" must default-export defineObject({...})`)
         }
 
         const obj = def as RpcObjectDefinition
@@ -66,9 +62,7 @@ export async function scanRpcObjects(
             throw new SettiError(`RPC meta file "${abs}": missing "name"`)
         }
         if (!obj.methods || typeof obj.methods !== 'object') {
-            throw new SettiError(
-                `RPC meta file "${abs}" (${obj.name}): missing "methods"`,
-            )
+            throw new SettiError(`RPC meta file "${abs}" (${obj.name}): missing "methods"`)
         }
 
         result.push(obj)

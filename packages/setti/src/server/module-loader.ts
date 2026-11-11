@@ -10,10 +10,7 @@ import { SettiError } from '../errors'
  * @param vite Vite dev-сервер.
  * @returns async-функция `(spec) => Promise<unknown>`.
  */
-export function createDevModuleLoader(
-    clientDir: string,
-    vite: ViteDevServer,
-): (spec: string) => Promise<unknown> {
+export function createDevModuleLoader(clientDir: string, vite: ViteDevServer): (spec: string) => Promise<unknown> {
     return async (spec: string): Promise<unknown> => {
         const [file, exportName] = spec.split(':')
         const abs = path.resolve(clientDir, file)
@@ -22,9 +19,7 @@ export function createDevModuleLoader(
         if (value === undefined) {
             throw new SettiError(
                 `Module "${spec}" resolved to undefined. ` +
-                (exportName
-                    ? `Export "${exportName}" not found in "${abs}"`
-                    : `No default export in "${abs}"`),
+                    (exportName ? `Export "${exportName}" not found in "${abs}"` : `No default export in "${abs}"`),
             )
         }
         return value
@@ -40,9 +35,7 @@ export function createDevModuleLoader(
  * @param serverEntryPath абсолютный путь до `dist/server/entry.js`.
  * @returns async-функция `(spec) => Promise<unknown>`.
  */
-export function createProdModuleLoader(
-    serverEntryPath: string,
-): (spec: string) => Promise<unknown> {
+export function createProdModuleLoader(serverEntryPath: string): (spec: string) => Promise<unknown> {
     let cached: Promise<Record<string, Record<string, unknown>>> | null = null
 
     const ensureLoaded = (): Promise<Record<string, Record<string, unknown>>> => {
@@ -61,14 +54,12 @@ export function createProdModuleLoader(
         if (!ns) {
             throw new SettiError(
                 `Module "${file}" not found in SSR bundle "${serverEntryPath}". ` +
-                `Available: ${Object.keys(modules).join(', ')}`,
+                    `Available: ${Object.keys(modules).join(', ')}`,
             )
         }
         const value = exportName ? ns[exportName] : ns.default
         if (value === undefined) {
-            throw new SettiError(
-                `Export "${exportName ?? 'default'}" not found in module "${file}"`,
-            )
+            throw new SettiError(`Export "${exportName ?? 'default'}" not found in module "${file}"`)
         }
         return value
     }

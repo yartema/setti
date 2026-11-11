@@ -9,9 +9,7 @@ import { interpolate } from './utils/interpolate'
  * при старте фреймворка (или CLI) и затем используется через
  * публичный `resolveModule`.
  */
-let internalResolver:
-    | ((spec: string, vars?: Record<string, unknown>) => Promise<unknown>)
-    | null = null
+let internalResolver: ((spec: string, vars?: Record<string, unknown>) => Promise<unknown>) | null = null
 
 /**
  * Инициализирует внутренний резолвер.
@@ -20,23 +18,17 @@ let internalResolver:
  * @param options.clientDir абсолютный путь до клиентского каталога.
  * @param options.jiti опциональный экземпляр jiti (для тестов/инъекции).
  */
-export function __initResolver(options: {
-    clientDir: string
-    jiti?: Jiti
-}): void {
-    const jiti = options.jiti ?? createJiti(import.meta.url, {
-        interopDefault: true,
-        jsx: true,
-    })
+export function __initResolver(options: { clientDir: string; jiti?: Jiti }): void {
+    const jiti =
+        options.jiti ??
+        createJiti(import.meta.url, {
+            interopDefault: true,
+            jsx: true,
+        })
 
-    internalResolver = async (
-        spec: string,
-        vars: Record<string, unknown> = {},
-    ): Promise<unknown> => {
+    internalResolver = async (spec: string, vars: Record<string, unknown> = {}): Promise<unknown> => {
         // 1. Подставляем переменные, если они есть (public API поддерживает переменные).
-        const resolved = vars && Object.keys(vars).length > 0
-            ? interpolate(spec, vars)
-            : spec
+        const resolved = vars && Object.keys(vars).length > 0 ? interpolate(spec, vars) : spec
 
         // 2. Отделяем путь до файла от имени экспорта (`<file>:<export>`).
         const [filePath, exportName] = resolved.split(':')
@@ -52,9 +44,9 @@ export function __initResolver(options: {
         if (value === undefined) {
             throw new SettiError(
                 `Module "${resolved}" resolved to undefined. ` +
-                (exportName
-                    ? `Export "${exportName}" not found in "${absPath}"`
-                    : `No default export in "${absPath}"`),
+                    (exportName
+                        ? `Export "${exportName}" not found in "${absPath}"`
+                        : `No default export in "${absPath}"`),
             )
         }
         return value
@@ -75,14 +67,11 @@ export function __initResolver(options: {
  * @returns экспортированное значение.
  * @throws {SettiError} если резолвер не инициализирован или модуль не найден.
  */
-export async function resolveModule(
-    spec: string,
-    vars?: Record<string, unknown>,
-): Promise<unknown> {
+export async function resolveModule(spec: string, vars?: Record<string, unknown>): Promise<unknown> {
     if (!internalResolver) {
         throw new SettiError(
             'resolveModule() called before setti was initialized. ' +
-            'Call __initResolver() from the framework entry point.',
+                'Call __initResolver() from the framework entry point.',
         )
     }
     return internalResolver(spec, vars)

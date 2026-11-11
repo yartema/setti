@@ -9,9 +9,6 @@ interface ServerAuthContext {
  * @param _params параметры (не используются).
  * @param ctx контекст SSR-рендера.
  */
-export default async function auth(
-    _params: Record<string, unknown>,
-    ctx: ServerAuthContext,
-): Promise<void> {
+export default async function auth(_params: Record<string, unknown>, ctx: ServerAuthContext): Promise<void> {
     console.log('[server-auth] check', ctx.router.path)
 }

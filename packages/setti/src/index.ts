@@ -65,21 +65,8 @@ export type { JsonRpcErrorPayload } from './errors'
 export { Service as SettiService } from './client/rpc/Service'
 
 // Prefetch (изоморфный).
-export {
-    runGlobalPrefetch,
-    runPagePrefetch,
-    runPrefetch,
-} from './shared/prefetch'
-export type {
-    PrefetchContext,
-    PrefetchRegistry,
-    PrefetchResult,
-    PrefetchSliceInfo,
-} from './shared/prefetch'
-export {
-    SettiErrorBoundary,
-    SettiLoading,
-    SettiNotFound,
-} from './client/index'
+export { runGlobalPrefetch, runPagePrefetch, runPrefetch } from './shared/prefetch'
+export type { PrefetchContext, PrefetchRegistry, PrefetchResult, PrefetchSliceInfo } from './shared/prefetch'
+export { SettiErrorBoundary, SettiLoading, SettiNotFound } from './client/index'
 export type { SettiErrorBoundaryProps } from './client/index'
 export { devalueParse, devalueStringify } from './client/index'
