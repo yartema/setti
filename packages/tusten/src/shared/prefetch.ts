@@ -22,6 +22,13 @@ export interface PrefetchContext {
 export interface PrefetchSliceInfo {
     dataFactoryName: string
     state: unknown
+    /**
+     * `dataFactoryArguments` фабрики (аргументы `getConfig`).
+     *
+     * Уходит в `__ROOT_STATE_STR__`, чтобы `_initState(result, config)` получил
+     * одно и то же на сервере и при клиентской гидратации.
+     */
+    config?: Record<string, unknown>
     scope: 'page' | 'global'
 }
 
@@ -79,34 +86,71 @@ export async function runGlobalPrefetch(
         return def.dependencies ?? []
     })
 
-    for (const name of sorted) {
+    // Как и в `runPagePrefetch`: независимые глобальные загрузчики идут
+    // параллельно, каждый ждёт только свои `dependencies`.
+    const loaded = new Map<string, Promise<Partial<FactoryImplementation>>>()
+
+    /**
+     * Загружает глобальный загрузчик после его зависимостей (мемоизировано).
+     *
+     * @param name имя загрузчика.
+     * @returns реализация фабрики.
+     * @throws {TustenError} если загрузчик невалиден или не найден.
+     */
+    const load = (name: string): Promise<Partial<FactoryImplementation>> => {
+        const cached = loaded.get(name)
+        if (cached) return cached
+
+        const def = globalRegistry[name]
+        if (!def) {
+            return Promise.reject(new TustenError(`Global dependency "${name}" not found in any *.loader.ts`))
+        }
+
+        const depNames = def.dependencies ?? []
+        const pending = (async () => {
+            const [implRaw] = await Promise.all([loadModule(def.dataFactoryName), ...depNames.map(load)])
+            const impl = implRaw as Partial<FactoryImplementation>
+            if (!impl || typeof impl.loadData !== 'function' || typeof impl.slice !== 'function') {
+                throw new TustenError(`Invalid global loader "${name}": expected loadData + slice class`)
+            }
+
+            const args: Record<string, unknown> = { ...(def.dataFactoryArguments ?? {}) }
+            if (typeof impl.getDataFactoryArguments === 'function') {
+                Object.assign(args, await impl.getDataFactoryArguments())
+            }
+            const deps: Record<string, unknown> = {}
+            for (const dep of depNames) deps[dep] = states.get(dep)
+
+            states.set(name, await impl.loadData(args, deps, { router }))
+            return impl
+        })()
+        loaded.set(name, pending)
+        return pending
+    }
+
+    const impls = await Promise.all(sorted.map(load))
+
+    // Коммит в топологическом порядке: порядок `slices`/`registry` детерминирован.
+    sorted.forEach((name, i) => {
         const def = globalRegistry[name]!
-        const implRaw = await loadModule(def.dataFactoryName)
-        const impl = implRaw as Partial<FactoryImplementation>
-        if (!impl || typeof impl.loadData !== 'function' || typeof impl.slice !== 'function') {
-            throw new TustenError(`Invalid global loader "${name}": expected loadData + slice class`)
-        }
+        const impl = impls[i]
+        const data = states.get(name)
 
-        const args: Record<string, unknown> = { ...(def.dataFactoryArguments ?? {}) }
-        if (typeof impl.getDataFactoryArguments === 'function') {
-            Object.assign(args, await impl.getDataFactoryArguments())
-        }
-        const deps: Record<string, unknown> = {}
-        for (const dep of def.dependencies ?? []) deps[dep] = states.get(dep)
-
-        const data = await impl.loadData(args, deps, { router })
-        states.set(name, data)
+        // `_initState(result, config)` должен видеть те же аргументы, что
+        // `loadData`: конфиг едет в `__ROOT_STATE_STR__` и на клиент.
+        const config = def.dataFactoryArguments ?? {}
         slices.set(name, {
             dataFactoryName: def.dataFactoryName,
             state: data,
+            config,
             scope: 'global',
         })
 
         const SliceClass = impl.slice as new () => AbstractSlice<unknown>
         const slice = new SliceClass()
-        slice.hydrate(data)
+        slice.hydrate(data, config)
         registry.setGlobal(name, slice)
-    }
+    })
 
     return states
 }
@@ -165,42 +209,76 @@ export async function runPagePrefetch(
         return def.dependencies ?? []
     })
 
-    for (const name of sorted) {
+    // Независимые фабрики стартуют одновременно: каждая ждёт только свои
+    // `dependencies`, а не всех предшественников в топопорядке. Иначе latency
+    // `loadData` суммируется (SSR TTFB и SPA-переход), а не берётся по максимуму.
+    // `sorted` оставляем ради детекта циклов и детерминированного коммита ниже.
+    const loaded = new Map<string, Promise<Partial<FactoryImplementation> | null>>()
+
+    /**
+     * Загружает фабрику после её зависимостей (мемоизировано по имени).
+     *
+     * @param name имя фабрики.
+     * @returns реализация фабрики или `null` для глобальной зависимости.
+     * @throws {TustenError} если фабрика невалидна.
+     */
+    const load = (name: string): Promise<Partial<FactoryImplementation> | null> => {
+        const cached = loaded.get(name)
+        if (cached) return cached
+
         const def = factoryMap[name]
+        // Глобальные зависимости (`userInfo`, ...) уже загружены: `topoSort`
+        // обходит всю цепочку `dependencies`, включая узлы из `globalStates`,
+        // а их состояние лежит в `states` (через `new Map(globalStates)` выше).
+        // Повторно `loadData` не вызываем — только page-фабрики.
+        if (!def) return Promise.resolve(null)
 
-        // `sorted` может содержать глобальные зависимости (`userInfo`, ...):
-        // `topoSort` обходит всю цепочку `dependencies`, включая узлы из
-        // `globalStates`. Глобальные уже загружены в `states` (через
-        // `new Map(globalStates)` выше) и зарегистрированы в registry.
-        // Их `loadData` повторно не вызываем — только page-фабрики.
-        if (!def) continue
+        const depNames = def.dependencies ?? []
+        const pending = (async () => {
+            // Модуль фабрики грузим параллельно с ожиданием зависимостей.
+            const [implRaw] = await Promise.all([loadModule(def.dataFactoryName), ...depNames.map(load)])
+            const impl = implRaw as Partial<FactoryImplementation>
+            if (!impl || typeof impl.loadData !== 'function' || typeof impl.slice !== 'function') {
+                throw new TustenError(`Invalid factory "${name}": expected loadData + slice`)
+            }
 
-        const implRaw = await loadModule(def.dataFactoryName)
-        const impl = implRaw as Partial<FactoryImplementation>
-        if (!impl || typeof impl.loadData !== 'function' || typeof impl.slice !== 'function') {
-            throw new TustenError(`Invalid factory "${name}": expected loadData + slice`)
-        }
+            const args: Record<string, unknown> = { ...(def.dataFactoryArguments ?? {}) }
+            if (typeof impl.getDataFactoryArguments === 'function') {
+                Object.assign(args, await impl.getDataFactoryArguments())
+            }
+            const deps: Record<string, unknown> = {}
+            for (const dep of depNames) deps[dep] = states.get(dep)
 
-        const args: Record<string, unknown> = { ...(def.dataFactoryArguments ?? {}) }
-        if (typeof impl.getDataFactoryArguments === 'function') {
-            Object.assign(args, await impl.getDataFactoryArguments())
-        }
-        const deps: Record<string, unknown> = {}
-        for (const dep of def.dependencies ?? []) deps[dep] = states.get(dep)
+            states.set(name, await impl.loadData(args, deps, { router }))
+            return impl
+        })()
+        loaded.set(name, pending)
+        return pending
+    }
 
-        const data = await impl.loadData(args, deps, { router })
-        states.set(name, data)
+    const impls = await Promise.all(sorted.map(load))
+
+    // Коммит строго в топологическом порядке: порядок `slices` (а значит и
+    // `__ROOT_STATE_STR__`) и `registry` не зависит от гонки завершения.
+    sorted.forEach((name, i) => {
+        const def = factoryMap[name]
+        const impl = impls[i]
+        if (!def || !impl) return
+
+        const data = states.get(name)
+        const config = def.dataFactoryArguments ?? {}
         slices.set(name, {
             dataFactoryName: def.dataFactoryName,
             state: data,
+            config,
             scope: 'page',
         })
 
         const SliceClass = impl.slice as new () => AbstractSlice<unknown>
         const slice = new SliceClass()
-        slice.hydrate(data)
+        slice.hydrate(data, config)
         registry.setPage(name, slice)
-    }
+    })
 
     // В `slices` (для `__ROOT_STATE_STR__`) добавим и global — чтобы клиент восстановил.
     for (const [name, data] of globalStates) {
@@ -209,6 +287,7 @@ export async function runPagePrefetch(
             slices.set(name, {
                 dataFactoryName: def.dataFactoryName,
                 state: data,
+                config: def.dataFactoryArguments ?? {},
                 scope: 'global',
             })
         }

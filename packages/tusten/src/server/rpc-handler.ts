@@ -24,9 +24,9 @@ export function createRpcHandler(options: RpcHandlerOptions) {
         reply.header('X-Request-Id', requestId)
 
         let extension: Record<string, unknown> = {}
-        if (config.rpc.extendContext) {
+        if (config.server.rpc.extendContext) {
             try {
-                extension = await config.rpc.extendContext(req)
+                extension = await config.server.rpc.extendContext(req)
             } catch (err) {
                 console.error('[tusten] rpc.extendContext failed:', err)
             }

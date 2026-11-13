@@ -1,7 +1,6 @@
-import type { UserConfig } from 'vite'
 import type { FactoryMap, ResolvedTustenConfig, RouteTree } from '../types';
 import { tustenPlugin } from '../vite/plugin'
-import { resolveCssMainPath } from '../utils/css'
+import { resolveCssPaths } from '../utils/css'
 
 /** Опции клиентского build. */
 export interface BuildClientOptions {
@@ -25,8 +24,8 @@ export async function buildClient(options: BuildClientOptions): Promise<void> {
         options
     const { build } = await import('vite')
     const react = (await import('@vitejs/plugin-react')).default
-    const userVite = (config.vite ?? {}) as UserConfig
-    const cssMainPath = resolveCssMainPath(projectDir, clientDir, config)
+    const userVite = config.vite ?? {}
+    const cssFiles = resolveCssPaths(projectDir, clientDir, config)
 
     await build({
         ...userVite,
@@ -41,10 +40,10 @@ export async function buildClient(options: BuildClientOptions): Promise<void> {
                 routeTree,
                 factoryModules,
                 globalFactories: globalRegistry,
-                cssMain: cssMainPath,
+                cssFiles,
             }),
             react(),
-            ...((userVite.plugins as import('vite').Plugin[]) ?? []),
+            ...(userVite.plugins ?? []),
         ],
         resolve: { ...(userVite.resolve ?? {}), preserveSymlinks: false },
         build: {

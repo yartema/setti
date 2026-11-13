@@ -1,5 +1,6 @@
 import type { Slice } from './client/slices/Slice'
 import type { FastifyServerOptions } from 'fastify'
+import type { UserConfig } from 'vite'
 
 /** HTTP-метод API-роута. */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
@@ -63,26 +64,57 @@ export interface ServerPluginsOptions {
 export interface TustenConfig {
     /** Включён ли SSR. Если `false` — приложение работает как SPA. */
     ssr?: boolean
-    /** Каталог клиентского кода. По умолчанию `client`. */
-    clientDir?: string
-    /** Каталог серверного кода. По умолчанию `server`. */
-    serverDir?: string
-    /**
-     * Реестр layout'ов. Ключ — идентификатор, используемый в `route.type`.
-     * Значение — путь до компонента layout'а относительно `clientDir`.
-     */
-    layouts?: Record<string, string>
+    /** Настройки клиента. */
+    client?: {
+        /** Каталог клиентского кода. По умолчанию `client`. */
+        clientDir?: string
+        /**
+         * Реестр layout'ов. Ключ — идентификатор, используемый в `route.type`.
+         * Значение — путь до компонента layout'а относительно `clientDir`.
+         */
+        layouts?: Record<string, string>
+        /**
+         * CSS-файлы, подключаемые при запуске приложения (пути относительно `clientDir`).
+         * Обычно содержат Tailwind-директивы и глобальные стили.
+         */
+        css?: string[]
+        /**
+         * Компоненты-обёртки. Пути от `clientDir` в формате `<file>:<export>`
+         * (или `<file>` для default).
+         */
+        components?: {
+            /** Fallback для ErrorBoundary. */
+            error?: string
+            /** Показывается во время первого SPA-prefetch (`?noSSR` / `ssr: false`). */
+            loading?: string
+            /** Рендерится при 404 (SSR). */
+            notFound?: string
+        }
+    }
     /** Настройки HTTP-сервера (Fastify). */
     server?: {
+        /** Каталог серверного кода. По умолчанию `server`. */
+        serverDir?: string
+        /** Порт. По умолчанию `3000`. */
         port?: number
+        /** Хост. По умолчанию `localhost`. */
         host?: string
         /** Путь до файла с `defineServerRoutes([...])`. */
         routes?: string
         /** Путь до каталога с Fastify-плагинами. */
         plugins?: string
+        /** Настройки JSON-RPC 2.0. `false` — отключить. */
+        rpc?: false | RpcOptions
     }
-    /** Мерж в пользовательскую Vite-конфигурацию (для Phase 1b). */
-    vite?: Record<string, unknown>
+    /** Глобальные middleware (client / server / both). */
+    middleware?: MiddlewareDef[]
+    /**
+     * Мерж в пользовательскую Vite-конфигурацию (dev-сервер и обе сборки).
+     *
+     * `root`, `configFile`, `appType` и `plugins` (частично) фреймворк
+     * задаёт сам — они переопределяются поверх этого объекта.
+     */
+    vite?: UserConfig
     /** Настройки сборки. */
     build?: {
         outDir?: string
@@ -91,15 +123,6 @@ export interface TustenConfig {
     runtimeConfig?: {
         public?: Record<string, unknown>
     }
-    css?: {
-        /**
-         * Путь до основного CSS-файла относительно `clientDir`.
-         * Обычно содержит Tailwind-директивы и глобальные стили.
-         */
-        main?: string
-    }
-    /** Глобальные middleware (client / server / both). */
-    middleware?: MiddlewareDef[]
     /**
      * Прямой проброс в `Fastify(opts)`.
      *
@@ -112,20 +135,21 @@ export interface TustenConfig {
      * Дефолт: `{ logger: { level: 'info' } }`.
      */
     fastify?: FastifyServerOptions
-    /** Настройки JSON-RPC 2.0. `false` — отключить. */
-    rpc?: false | RpcOptions
     /**
-     * Компоненты-обёртки. Пути от `clientDir` в формате `<file>:<export>`
-     * (или `<file>` для default).
+     * Локализация клиентских модулей (`import rk from 'i18n!<Module>'`). Без этого поля фича
+     * отключена: `rk(key)` возвращает `key` без поиска словарей.
      */
-    components?: {
-        /** Fallback для ErrorBoundary. */
-        error?: string
-        /** Показывается во время первого SPA-prefetch (`?noSSR` / `ssr: false`). */
-        loading?: string
-        /** Рендерится при 404 (SSR). */
-        notFound?: string
-    }
+    i18n?: TustenI18nConfig
+}
+
+/**
+ * Настройки i18n, задаваемые в `defineConfig({ i18n: {...} })`.
+ */
+export interface TustenI18nConfig {
+    /** Основной язык. Ключи в коде — тексты на этом языке. Обязан входить в `locales`. */
+    defaultLocale: string
+    /** Все поддерживаемые языки. Словари ищутся по `lang/<locale>/<locale>.json`. */
+    locales: string[]
 }
 
 /**
@@ -152,34 +176,45 @@ export interface TustenClientRouter {
  * а не `undefined`.
  */
 export interface ResolvedTustenConfig {
+    // Флаг, включен ли SSR
     ssr: boolean
-    clientDir: string
-    serverDir: string
-    layouts: Record<string, string>
-    middleware: MiddlewareDef[]
+    // Настройки клиента
+    client: {
+        // Название папки клиента в корне проекта, по умолчанию client
+        clientDir: string
+        // Layouts
+        layouts: Record<string, string>
+        // Массив путей до css файлов, которые подключаются по запуске приложения
+        css: string[]
+        // Пути до общих компонентов
+        components: {
+            error: string | null
+            loading: string | null
+            notFound: string | null
+        }
+    }
+    // Настройки сервера
     server: {
+        // Название папки сервера в корне проекта, по умолчанию server
+        serverDir: string
+        // Порт
         port: number
         host: string
         routes: string | null
         plugins: string | null
+        rpc: ResolvedRpcOptions
     }
-    vite: Record<string, unknown>
+    middleware: MiddlewareDef[]
+    vite: UserConfig
     build: {
         outDir: string
-    }
-    css: {
-        main: string
     }
     runtimeConfig: {
         public: Record<string, unknown>
     }
     fastify?: FastifyServerOptions
-    rpc: ResolvedRpcOptions
-    components: {
-        error: string | null
-        loading: string | null
-        notFound: string | null
-    }
+    /** Нормализованные настройки i18n; `null` — фича отключена. */
+    i18n: TustenI18nConfig | null
 }
 
 /**
@@ -278,7 +313,7 @@ export interface TustenRoute {
     id: string
     /** Идентификатор родителя (для иерархии URL). */
     parentId?: string
-    /** Ключ layout'а из `config.layouts`. */
+    /** Ключ layout'а из `config.client.layouts`. */
     type: string
     /**
      * Если `true` — собственный `id` не попадает в URL.
@@ -419,6 +454,12 @@ export interface ScanResult {
     loaderModules: Array<{ file: string; map: FactoryMap }>
 }
 
+/**
+ * Реестр словарей i18n: имя модуля (папка в `clientDir`) → locale → абсолютный
+ * путь к `lang/<locale>/<locale>.json`. Записываются только существующие файлы.
+ */
+export type I18nRegistry = Record<string, Record<string, string>>
+
 // ============================================================================
 // RPC (JSON-RPC 2.0)
 // ============================================================================
@@ -490,7 +531,7 @@ export interface RpcMethodDefinition<P = unknown, R = unknown> {
      * Обработчик бизнес-логики.
      *
      * @param params валидированные параметры.
-     * @param ctx контекст (requestId, call, расширения из `config.rpc.extendContext`).
+     * @param ctx контекст (requestId, call, расширения из `config.server.rpc.extendContext`).
      * @returns результат (сериализуется как `result` в JSON-RPC).
      */
     handler: (params: P, ctx: RpcContext) => R | Promise<R>
@@ -523,7 +564,7 @@ export interface RpcObjectDefinition {
 /**
  * Контекст, передаваемый в `RpcMethodDefinition.handler`.
  *
- * Расширяется прикладником через `config.rpc.extendContext` +
+ * Расширяется прикладником через `config.server.rpc.extendContext` +
  * module augmentation (`declare module '@tusten/core/server' { interface RpcContext {...} }`).
  */
 export interface RpcContext {
@@ -537,7 +578,7 @@ export interface RpcContext {
      * Для `internal: true` — единственный способ вызвать.
      */
     call: <R = unknown>(method: string, params?: unknown) => Promise<R>
-    /** Расширения из `config.rpc.extendContext`. */
+    /** Расширения из `config.server.rpc.extendContext`. */
     [key: string]: unknown
 }
 

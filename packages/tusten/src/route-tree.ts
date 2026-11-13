@@ -10,7 +10,7 @@ import type { CompiledRoute, MiddlewareDef, ResolvedTustenConfig, RouteTree, Tus
  * - `parentId` ссылается на существующий маршрут;
  * - нет циклов по `parentId`;
  * - ровно один `index: true` (глобально);
- * - `type` ссылается на существующий `config.layouts`;
+ * - `type` ссылается на существующий `config.client.layouts`;
  * - нет коллизий между локальными фабриками и GlobalRegistry (A3).
  *
  * @param routeModules результат `scan().routeModules`.
@@ -68,7 +68,7 @@ export function buildRouteTree(
     }
 
     // 5. Валидация type → layouts.
-    const layoutKeys = new Set(Object.keys(config.layouts))
+    const layoutKeys = new Set(Object.keys(config.client.layouts))
     for (const route of allRoutes) {
         if (!layoutKeys.has(route.type)) {
             throw new TustenError(

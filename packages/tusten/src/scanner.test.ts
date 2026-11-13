@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { scan } from './scanner'
+import { scan, scanI18n } from './scanner'
 import { TustenError } from './errors'
 
 /** Временный корень — создаётся в `beforeAll`, удаляется в `afterAll`. */
@@ -136,5 +136,43 @@ describe('scan', () => {
         const clientDir = join(tmpRoot, 'bad-loader')
         await makeFile('bad-loader/X.loader.ts', `export const x = { userInfo: {} }`)
         await expect(scan(clientDir)).rejects.toThrow(/must have "dataFactoryName: string"/)
+    })
+})
+
+describe('scanI18n', () => {
+    const i18n = { defaultLocale: 'ru', locales: ['ru', 'en'] }
+
+    it('i18n выключен (null) — пустой реестр, даже если словари есть', async () => {
+        await makeFile('i18n-off/HomePage/lang/en/en.json', `{"a":"b"}`)
+        expect(scanI18n(join(tmpRoot, 'i18n-off'), null)).toEqual({})
+    })
+
+    it('несуществующий clientDir — пустой реестр (не падает)', () => {
+        expect(scanI18n(join(tmpRoot, 'i18n-nope'), i18n)).toEqual({})
+    })
+
+    it('находит словари по каждой locale из конфига, пропуская отсутствующие', async () => {
+        const clientDir = join(tmpRoot, 'i18n-found')
+        await makeFile('i18n-found/HomePage/lang/ru/ru.json', `{}`)
+        await makeFile('i18n-found/HomePage/lang/en/en.json', `{}`)
+        // Локаль вне конфига не попадает в реестр, даже если файл лежит рядом.
+        await makeFile('i18n-found/HomePage/lang/de/de.json', `{}`)
+        // Файл с другим именем не считается словарём.
+        await makeFile('i18n-found/Other/lang/en/index.json', `{}`)
+
+        const registry = scanI18n(clientDir, i18n)
+        expect(Object.keys(registry)).toEqual(['HomePage'])
+        expect(Object.keys(registry.HomePage).sort()).toEqual(['en', 'ru'])
+        expect(registry.HomePage.en.endsWith(join('HomePage', 'lang', 'en', 'en.json'))).toBe(true)
+    })
+
+    it('модуль без словарей не попадает в реестр; node_modules и dot-папки пропускаются', async () => {
+        const clientDir = join(tmpRoot, 'i18n-skip')
+        await makeFile('i18n-skip/Empty/router.ts', `export default []`)
+        await makeFile('i18n-skip/node_modules/lang/en/en.json', `{}`)
+        await makeFile('i18n-skip/.cache/lang/en/en.json', `{}`)
+        await makeFile('i18n-skip/Real/lang/en/en.json', `{}`)
+
+        expect(Object.keys(scanI18n(clientDir, i18n))).toEqual(['Real'])
     })
 })

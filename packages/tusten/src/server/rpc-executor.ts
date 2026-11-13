@@ -18,9 +18,9 @@ export function createRpcExecutor(registry: RpcRegistry, config: ResolvedTustenC
         const body = JSON.parse(payload)
 
         let extension: Record<string, unknown> = {}
-        if (config.rpc.extendContext) {
+        if (config.server.rpc.extendContext) {
             try {
-                extension = await config.rpc.extendContext({ headers })
+                extension = await config.server.rpc.extendContext({ headers })
             } catch (err) {
                 console.error('[tusten] rpc.extendContext (executor) failed:', err)
             }

@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference -- ambient-тип `i18n!*` — глобальный скрипт, импортом не подключается. В dist ссылку дописывает scripts/postbuild.mjs.
+/// <reference path="../../types/i18n.d.ts" />
 /**
  * Публичный API клиентской части tusten.
  *
@@ -18,7 +20,7 @@ export { useStrictSlice } from './hooks/useStrictSlice'
 export { useSliceRef } from './hooks/useSliceRef'
 export { useSliceInternal } from './hooks/useSliceInternal'
 export type { UseSliceInternalOptions } from './hooks/useSliceInternal'
-export { useRouter } from './hooks/useRouter'
+export { useRouter, getRouter } from './hooks/useRouter'
 export type { TustenRouterApi } from './hooks/useRouter'
 export { useParams } from './hooks/useParams'
 export { useQuery } from './hooks/useQuery'
@@ -39,3 +41,19 @@ export { RootNotFound } from './not-found'
 export { parse as devalueParse, stringify as devalueStringify } from 'devalue'
 export { usePageMeta } from './hooks/usePageMeta'
 export type { UsePageMetaOptions } from './hooks/usePageMeta'
+
+// i18n: runtime-перевод модулей (`import rk from 'i18n!<Module>'`) и интерполяция.
+export { createRk } from './i18n/create-rk'
+export type { RkFunction, I18nDictionary, I18nLoader } from './i18n/create-rk'
+export { template } from './i18n/template'
+export type { TemplateParams } from './i18n/template'
+export { getLocale, setLocale, setLocaleResolver } from './i18n/locale'
+export type { LocaleResolver } from './i18n/locale'
+// Внутреннее: сгенерированные entry (клиентский и SSR) передают сюда данные из HTML.
+export {
+    initI18n,
+    loadRegisteredDictionaries,
+    getRegisteredDictionary,
+    setI18nUsageHook,
+} from './i18n/runtime'
+export type { I18nBootstrap } from './i18n/runtime'

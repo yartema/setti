@@ -5,27 +5,49 @@ import { RpcRegistry } from './rpc-registry'
 import type { ResolvedTustenConfig, RpcMethodDefinition } from '../types'
 
 /**
+ * Переопределения конфига: верхний уровень — shallow, `client`/`server` — частично.
+ */
+type ConfigOverrides = Partial<Omit<ResolvedTustenConfig, 'client' | 'server'>> & {
+    client?: Partial<ResolvedTustenConfig['client']>
+    server?: Partial<ResolvedTustenConfig['server']>
+}
+
+/**
  * Минимальный `ResolvedTustenConfig` для тестов.
  *
  * @param overrides переопределения.
  * @returns конфиг.
  */
-function makeConfig(overrides: Partial<ResolvedTustenConfig> = {}): ResolvedTustenConfig {
-    return {
+function makeConfig(overrides: ConfigOverrides = {}): ResolvedTustenConfig {
+    const base: ResolvedTustenConfig = {
         ssr: true,
-        clientDir: 'client',
-        serverDir: 'server',
-        layouts: {},
-        components: { error: null, loading: null, notFound: null },
-        server: { port: 3000, host: '0.0.0.0', routes: null, plugins: null },
-        fastify: {},
-        rpc: { enabled: true, url: '/service', describe: true },
+        client: {
+            clientDir: 'client',
+            layouts: {},
+            css: [],
+            components: { error: null, loading: null, notFound: null },
+        },
+        server: {
+            serverDir: 'server',
+            port: 3000,
+            host: '0.0.0.0',
+            routes: null,
+            plugins: null,
+            rpc: { enabled: true, url: '/service', describe: true },
+        },
         middleware: [],
-        css: { main: '' },
         vite: {},
         build: { outDir: 'dist' },
+        runtimeConfig: { public: {} },
+        i18n: null,
+    }
+
+    return {
+        ...base,
         ...overrides,
-    } as ResolvedTustenConfig
+        client: { ...base.client, ...overrides.client },
+        server: { ...base.server, ...overrides.server },
+    }
 }
 
 /**
@@ -44,7 +66,7 @@ function makeApp(
     const app = Fastify({ logger: false })
     const registry = new RpcRegistry()
     registry.add({ name: 'Users', methods })
-    app.post(config.rpc.url, createRpcHandler({ registry, config }))
+    app.post(config.server.rpc.url, createRpcHandler({ registry, config }))
     return app
 }
 
@@ -108,7 +130,7 @@ describe('POST /service — интеграция (fastify.inject)', () => {
     it('extendContext вызывается, результат мержится в ctx', async () => {
         const extendContext = vi.fn(async () => ({ user: { id: 42 } }))
         const config = makeConfig({
-            rpc: { enabled: true, url: '/service', describe: true, extendContext },
+            server: { rpc: { enabled: true, url: '/service', describe: true, extendContext } },
         })
         const app = makeApp({ Who: { handler: async (_p, ctx) => ({ user: ctx.user }) } }, config)
         const res = await app.inject({
@@ -125,7 +147,7 @@ describe('POST /service — интеграция (fastify.inject)', () => {
             throw new Error('boom')
         })
         const config = makeConfig({
-            rpc: { enabled: true, url: '/service', describe: true, extendContext },
+            server: { rpc: { enabled: true, url: '/service', describe: true, extendContext } },
         })
         const app = makeApp({ Who: { handler: async (_p, ctx) => ({ user: ctx.user ?? null }) } }, config)
         const res = await app.inject({
@@ -164,9 +186,9 @@ describe('POST /service — интеграция (fastify.inject)', () => {
         expect(body.result.objects[0].name).toBe('Users')
     })
 
-    it('кастомный url из config.rpc.url', async () => {
+    it('кастомный url из server.rpc.url', async () => {
         const config = makeConfig({
-            rpc: { enabled: true, url: '/rpc', describe: true },
+            server: { rpc: { enabled: true, url: '/rpc', describe: true } },
         })
         const app = makeApp({ Ping: { handler: async () => 'pong' } }, config)
         const res = await app.inject({

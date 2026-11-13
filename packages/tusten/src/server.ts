@@ -29,6 +29,8 @@ export type { SerializedState } from './server/serialize'
 // Vite-плагин.
 export { tustenPlugin } from './vite/plugin'
 export type { TustenVitePluginOptions } from './vite/plugin'
+// i18n-заглушка для тестов (Vitest): `i18n!X` → `rk(key) => key`.
+export { i18nTestPlugin } from './vite/i18n-test'
 
 // Build.
 export { buildProject } from './build/build'

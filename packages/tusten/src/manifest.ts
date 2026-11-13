@@ -7,7 +7,7 @@ import type { Manifest, ManifestEntry, ModuleKind, ResolvedTustenConfig, ScanRes
  * На Phase 1a определяем `kind` по использованию:
  * - `router.ts` → `routes`;
  * - `*.loader.ts` → `globalLoader`;
- * - `config.layouts` → `layout`;
+ * - `config.client.layouts` → `layout`;
  * - `contentConfig.workspaceConfig.template` → `component`;
  * - `contentConfig.prefetchConfig.configLoader` → `config`.
  *
@@ -47,7 +47,7 @@ export function buildManifest(scan: ScanResult, config: ResolvedTustenConfig, cl
     }
 
     // Layouts из конфига.
-    for (const layoutPath of Object.values(config.layouts)) {
+    for (const layoutPath of Object.values(config.client.layouts)) {
         add(stripExt(toRelativeName(layoutPath)), 'layout')
     }
 

@@ -19,7 +19,7 @@ export { defineGlobalLoader } from './define-global-loader'
 export { AbstractSlice } from './client/slices/AbstractSlice'
 export { Slice } from './client/slices/Slice'
 export { SliceRegistry } from './client/slices/SliceRegistry'
-export type { SliceListener, SliceUpdater } from './client/slices/AbstractSlice'
+export type { SliceListener, SlicePatch, SliceUpdater } from './client/slices/AbstractSlice'
 
 // URL-билдер.
 export { computePath } from './url'

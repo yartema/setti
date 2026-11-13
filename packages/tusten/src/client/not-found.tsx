@@ -1,7 +1,7 @@
 import { createElement, type ReactNode } from 'react'
 
 /**
- * Дефолтная 404-страница (если `config.components.notFound` не задан).
+ * Дефолтная 404-страница (если `config.client.components.notFound` не задан).
  *
  * @returns ReactNode.
  */

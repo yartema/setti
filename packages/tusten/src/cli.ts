@@ -2,14 +2,16 @@
 // CLI фреймворка tusten.
 
 import path from 'node:path'
+import { readFileSync } from 'node:fs'
 import { loadConfig } from './config'
-import { scan } from './scanner'
+import { scan, scanI18n } from './scanner'
 import { buildRouteTree } from './route-tree'
 import { buildManifest } from './manifest'
 import { __initResolver } from './resolver'
 import { collectFactoryModules } from './build/collect-factories'
-import type { FactoryMap } from './types'
+import type { FactoryMap, TustenI18nConfig } from './types'
 import { TustenError } from './errors'
+import { parseDictionary } from './vite/i18n'
 import { scanRpcObjects } from './server/rpc-scanner'
 import { RpcRegistry } from './server/rpc-registry'
 
@@ -22,7 +24,7 @@ import { RpcRegistry } from './server/rpc-registry'
  */
 async function prepare(cwd: string) {
     const config = await loadConfig(cwd)
-    const clientDir = path.resolve(cwd, config.clientDir)
+    const clientDir = path.resolve(cwd, config.client.clientDir)
     const scanResult = await scan(clientDir)
     const routeTree = buildRouteTree(scanResult.routeModules, scanResult.loaderModules, config)
     const manifest = buildManifest(scanResult, config, clientDir)
@@ -44,9 +46,9 @@ async function prepare(cwd: string) {
     const factoryModules = await collectFactoryModules(cwd, routeTree, scanResult, clientDir)
 
     // RPC-реестр (если RPC включён).
-    const serverDir = path.resolve(cwd, config.serverDir)
+    const serverDir = path.resolve(cwd, config.server.serverDir)
     let rpcRegistry: RpcRegistry | null = null
-    if (config.rpc.enabled) {
+    if (config.server.rpc.enabled) {
         const rpcObjects = await scanRpcObjects(serverDir)
         rpcRegistry = new RpcRegistry()
         for (const obj of rpcObjects) rpcRegistry.add(obj)
@@ -64,10 +66,47 @@ async function prepare(cwd: string) {
     }
 }
 
+/**
+ * Печатает i18n-модули: locale, для которых найден словарь, число ключей и отсутствующие locale.
+ * Битый словарь не роняет команду: ошибка выводится в строке модуля. Сборка упадёт на нём же.
+ *
+ * @param i18n нормализованный конфиг i18n; `null` — фича выключена.
+ * @param clientDir абсолютный путь до `clientDir`.
+ */
+function printI18n(i18n: TustenI18nConfig | null, clientDir: string): void {
+    console.log('\ni18n:')
+    if (!i18n) {
+        console.log('  (disabled: добавьте i18n в tusten.config.ts)')
+        return
+    }
+    console.log(`  defaultLocale: ${i18n.defaultLocale}, locales: ${i18n.locales.join(', ')}`)
+
+    const registry = scanI18n(clientDir, i18n)
+    const modules = Object.keys(registry).sort()
+    if (modules.length === 0) {
+        console.log('  (no dictionaries found: ожидается lang/<locale>/<locale>.json в модуле)')
+        return
+    }
+    for (const moduleName of modules) {
+        const dicts = registry[moduleName]
+        const cells = i18n.locales.map((locale) => {
+            const file = dicts[locale]
+            if (!file) return `${locale}: —`
+            try {
+                const dict = parseDictionary(readFileSync(file, 'utf8'), file)
+                return `${locale}: ${Object.keys(dict).length} keys`
+            } catch (err) {
+                return `${locale}: ERROR ${(err as Error).message}`
+            }
+        })
+        console.log(`  ${moduleName.padEnd(30)} ${cells.join(' | ')}`)
+    }
+}
+
 /** Команда `tusten inspect`. */
 async function inspect(): Promise<void> {
     const cwd = process.cwd()
-    const { routeTree, manifest, rpcRegistry } = await prepare(cwd)
+    const { config, clientDir, routeTree, manifest, rpcRegistry } = await prepare(cwd)
 
     console.log('Routes:')
     if (routeTree.byId.size === 0) {
@@ -90,6 +129,7 @@ async function inspect(): Promise<void> {
             console.log(`  ${name}${internal}${desc}`)
         }
     }
+    printI18n(config.i18n, clientDir)
     console.log('\nManifest:')
     console.log(JSON.stringify(manifest, null, 2))
 }
@@ -178,7 +218,7 @@ Commands:
   dev       Start dev server (Fastify + Vite)
   build     Build for production (client + server)
   start     Start production server
-  inspect   Dump routes and manifest
+  inspect   Dump routes, RPC, i18n and manifest
 `)
             break
     }

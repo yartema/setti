@@ -11,6 +11,8 @@ export interface User {
 export interface UserListState {
     users: User[]
     total: number
+    /** Значение `limit` из `dataFactoryArguments` (демо второго аргумента `_initState`). */
+    limit: number
     reload: () => void
 }
 
@@ -23,13 +25,18 @@ export const usersService = new Service({ endpoint: 'Users', binding: { query: '
 export class UserListSlice extends Slice<UserListState> {
     /**
      * @param result результат `loadData` (`{ users }`).
+     * @param config `dataFactoryArguments` фабрики (`{ limit }`).
      * @returns обогащённое состояние.
      */
-    protected override _initState(result: unknown): UserListState {
+    protected override _initState(result: unknown, config?: unknown): UserListState {
         const { users } = result as { users: User[] }
+        // `config` сериализуется в __ROOT_STATE_STR__, поэтому при гидратации
+        // на клиенте значение будет тем же, что и на сервере.
+        const { limit = 10 } = (config ?? {}) as { limit?: number }
         return {
             users,
             total: users.length,
+            limit,
             reload: () => {
                 console.log('[UserList] reload (noop in example)')
             },

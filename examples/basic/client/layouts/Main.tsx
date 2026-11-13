@@ -1,5 +1,6 @@
-import type { JSX, ReactNode } from 'react'
+import { JSX, ReactNode, useCallback } from 'react'
 import { Link, Outlet, usePathname } from '@tusten/core/client'
+import { setLocale, getLocale } from '@tusten/core/client'
 
 /**
  * Основной layout: header с навигацией, main, footer.

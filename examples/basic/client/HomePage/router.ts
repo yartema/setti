@@ -15,7 +15,7 @@ export default defineRoute([
         middleware: [{ id: 'auth', handler: 'client/middleware/auth' }],
         contentConfig: {
             workspaceConfig: {
-                template: 'HomePage/view:View',
+                template: 'HomePage/View:View',
             },
             prefetchConfig: {
                 configLoader: 'HomePage/Factories/Root',

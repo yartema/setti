@@ -1,7 +1,17 @@
 import path from 'node:path'
 import fs from 'node:fs'
-import type { Plugin } from 'vite'
+import type { Plugin, ViteDevServer } from 'vite'
 import type { CompiledRoute, FactoryMap, MiddlewareDef, TustenRoute, ResolvedTustenConfig, RouteTree } from '../types'
+import { toVitePath } from '../utils/fs'
+import { scanI18n } from '../scanner'
+import {
+    I18N_DICT_PREFIX,
+    I18N_USER_PREFIX,
+    I18N_VIRTUAL_PREFIX,
+    generateI18nDictModule,
+    generateI18nModule,
+    parseDictionary,
+} from './i18n'
 
 /** Опции Vite-плагина tusten. */
 export interface TustenVitePluginOptions {
@@ -13,8 +23,8 @@ export interface TustenVitePluginOptions {
     factoryModules?: string[]
     /** Глобальный реестр фабрик (`*.loader.ts`). */
     globalFactories?: FactoryMap
-    /** Vite-путь до `css.main`. */
-    cssMain?: string
+    /** Vite-пути до глобальных CSS (`config.css`). */
+    cssFiles?: string[]
 }
 
 const VIRTUAL_ROUTES = 'virtual:tusten/routes'
@@ -31,7 +41,7 @@ const RESOLVED_SSR_ENTRY = '\0' + VIRTUAL_SSR_ENTRY
  * @returns Vite-плагин.
  */
 export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
-    const { projectDir, clientDir, config, routeTree, factoryModules = [], globalFactories = {}, cssMain } = options
+    const { projectDir, clientDir, config, routeTree, factoryModules = [], globalFactories = {}, cssFiles = [] } = options
 
     /**
      * Резолвит спеку клиентского модуля в Vite-путь.
@@ -50,7 +60,7 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
                 break
             }
         }
-        return '/' + path.relative(projectDir, finalAbs).replace(/\\/g, '/')
+        return toVitePath(projectDir, finalAbs)
     }
 
     /**
@@ -70,7 +80,7 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
                 break
             }
         }
-        return '/' + path.relative(projectDir, finalAbs).replace(/\\/g, '/')
+        return toVitePath(projectDir, finalAbs)
     }
 
     /**
@@ -108,7 +118,7 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
 
     // ---- 2. layoutPaths: type → { path, export } ----
     const layoutPaths: Record<string, { path: string; export: string }> = {}
-    for (const [type, rel] of Object.entries(config.layouts)) {
+    for (const [type, rel] of Object.entries(config.client.layouts)) {
         layoutPaths[type] = {
             path: resolveSpec(rel),
             export: rel.split(':')[1] ?? 'default',
@@ -126,7 +136,7 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
 
     for (const route of routeTree.byId.values()) {
         addSpec(route.contentConfig.workspaceConfig.template)
-        const layoutRel = config.layouts[route.type]
+        const layoutRel = config.client.layouts[route.type]
         if (layoutRel) addSpec(layoutRel)
         addSpec(route.contentConfig.prefetchConfig.configLoader)
     }
@@ -144,7 +154,7 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
 
     // Компоненты (error / loading / notFound) — в client bundle.
     for (const key of ['error', 'loading', 'notFound'] as const) {
-        const spec = config.components[key]
+        const spec = config.client.components[key]
         if (spec) addSpec(spec)
     }
 
@@ -152,7 +162,7 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
     const allSsrSpecs = new Set<string>()
     for (const route of routeTree.byId.values()) {
         allSsrSpecs.add(route.contentConfig.workspaceConfig.template)
-        const layoutRel = config.layouts[route.type]
+        const layoutRel = config.client.layouts[route.type]
         if (layoutRel) allSsrSpecs.add(layoutRel)
         allSsrSpecs.add(route.contentConfig.prefetchConfig.configLoader)
     }
@@ -172,7 +182,7 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
 
     // Компоненты (error / loading / notFound) — в SSR bundle.
     for (const key of ['error', 'loading', 'notFound'] as const) {
-        const spec = config.components[key]
+        const spec = config.client.components[key]
         if (spec) allSsrSpecs.add(spec)
     }
 
@@ -201,7 +211,7 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
     // ---- 6. componentsMeta ----
     const componentsMeta: Record<string, { path: string; export: string } | null> = {}
     for (const key of ['error', 'loading', 'notFound'] as const) {
-        const spec = config.components[key]
+        const spec = config.client.components[key]
         if (spec) {
             const [, exportName = 'default'] = spec.split(':')
             componentsMeta[key] = {
@@ -213,12 +223,25 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
         }
     }
 
+    // Реестр словарей снимаем один раз на старте: новые словари подхватятся
+    // после перезапуска dev-сервера (так же, как маршруты из router.ts).
+    const i18nRegistry = scanI18n(clientDir, config.i18n)
+    // Нормализованные пути для сравнения в handleHotUpdate (watcher отдаёт forward-slash).
+    const i18nDictFiles = new Set(Object.values(i18nRegistry).flatMap((dicts) => Object.values(dicts)).map(toPosix))
+
     return {
         name: 'tusten',
         resolveId(id) {
+            // Префикс `\0` — соглашение Vite для virtual-модулей: такой id не должен
+            // резолвиться на диск, поэтому резолвим сразу в `\0`-вариант.
             if (id === VIRTUAL_ROUTES) return RESOLVED_ROUTES
             if (id === VIRTUAL_ENTRY) return RESOLVED_ENTRY
             if (id === VIRTUAL_SSR_ENTRY) return RESOLVED_SSR_ENTRY
+            // Пользовательский импорт — только `i18n!<Module>`. `i18n:` без `!` сюда не попадает:
+            // внутренний `i18n:` доступен лишь через `\0`-id, который генерирует сам плагин.
+            if (id.startsWith(I18N_USER_PREFIX)) return '\0' + I18N_VIRTUAL_PREFIX + id.slice(I18N_USER_PREFIX.length)
+            // `i18n-dict:` приходит только из сгенерированного кода модуля (динамический import).
+            if (id.startsWith(I18N_DICT_PREFIX)) return '\0' + id
             return null
         },
         async load(id) {
@@ -233,12 +256,61 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
                     componentsMeta,
                 )
             }
-            if (id === RESOLVED_ENTRY) return generateEntryModule(cssMain)
+            if (id === RESOLVED_ENTRY) return generateEntryModule(cssFiles)
             if (id === RESOLVED_SSR_ENTRY) {
                 return generateSsrEntryModule(ssrModulePaths)
             }
+            if (id.startsWith('\0' + I18N_VIRTUAL_PREFIX)) {
+                const moduleName = id.slice(('\0' + I18N_VIRTUAL_PREFIX).length)
+                return generateI18nModule(moduleName, i18nRegistry[moduleName] ?? {})
+            }
+            if (id.startsWith('\0' + I18N_DICT_PREFIX)) {
+                // id вида `<Module>:<locale>`; locale не содержит `:` (валидируется в config.ts),
+                // поэтому делим по последнему двоеточию.
+                const rest = id.slice(('\0' + I18N_DICT_PREFIX).length)
+                const sep = rest.lastIndexOf(':')
+                const file = i18nRegistry[rest.slice(0, sep)]?.[rest.slice(sep + 1)]
+                if (!file) return generateI18nDictModule({})
+                this.addWatchFile(file)
+                const source = fs.readFileSync(file, 'utf8')
+                return generateI18nDictModule(parseDictionary(source, file))
+            }
             return null
         },
+        handleHotUpdate({ file, server }) {
+            if (!i18nDictFiles.has(toPosix(file))) return
+            // Словарь подгружается динамическим import() из virtual-модуля, который не является
+            // HMR-границей. Проще и надёжнее сбросить кэш i18n-модулей и перезагрузить страницу.
+            invalidateI18nModules(server)
+            server.ws.send({ type: 'full-reload' })
+            return []
+        },
+    }
+}
+
+/**
+ * Приводит путь к forward-slash: Vite и watcher используют такой формат на всех ОС.
+ *
+ * @param p путь.
+ * @returns путь с `/`.
+ */
+function toPosix(p: string): string {
+    return p.replace(/\\/g, '/')
+}
+
+/**
+ * Сбрасывает трансформ-кэш всех i18n virtual-модулей во всех окружениях
+ * (клиент и SSR), чтобы следующий запрос перечитал JSON с диска.
+ *
+ * @param server dev-сервер Vite.
+ */
+function invalidateI18nModules(server: ViteDevServer): void {
+    for (const env of Object.values(server.environments)) {
+        for (const mod of env.moduleGraph.idToModuleMap.values()) {
+            if (mod.id?.startsWith('\0' + I18N_VIRTUAL_PREFIX) || mod.id?.startsWith('\0' + I18N_DICT_PREFIX)) {
+                env.moduleGraph.invalidateModule(mod)
+            }
+        }
     }
 }
 
@@ -355,20 +427,22 @@ export function findRouteByPath(path) {
 }
 
 export async function loadRouteModules(route) {
-  const templateMod = await moduleLoaders[route.templatePath]()
+  // Шаблон и все layout грузим одним залпом: каждый последовательный
+  // await — это отдельный RTT (на 3G сотни мс).
+  const infos = (route.layoutChain || []).map((t) => layoutPaths[t]).filter(Boolean)
+  const [templateMod, ...layoutMods] = await Promise.all([
+    moduleLoaders[route.templatePath](),
+    ...infos.map((info) => moduleLoaders[info.path]()),
+  ])
+
   const Template = templateMod[route.templateExport]
   if (!Template) {
     throw new Error('Export "' + route.templateExport + '" not found in ' + route.templatePath)
   }
 
-  const Layouts = []
-  for (const type of (route.layoutChain || [])) {
-    const info = layoutPaths[type]
-    if (!info) continue
-    const layoutMod = await moduleLoaders[info.path]()
-    const Layout = layoutMod[info.export]
-    if (typeof Layout === 'function') Layouts.push(Layout)
-  }
+  const Layouts = layoutMods
+    .map((mod, i) => mod[infos[i].export])
+    .filter((Layout) => typeof Layout === 'function')
 
   return { Template, Layouts }
 }
@@ -451,11 +525,11 @@ export async function loadMiddlewareModule(handler) {
 /**
  * Генерирует `virtual:tusten/client-entry`.
  *
- * @param cssMain Vite-путь до `css.main`.
+ * @param cssFiles Vite-пути до глобальных CSS (`config.css`).
  * @returns код модуля.
  */
-function generateEntryModule(cssMain?: string): string {
-    const cssImport = cssMain ? `import '${cssMain}'` : ''
+function generateEntryModule(cssFiles: string[] = []): string {
+    const cssImport = cssFiles.map((file) => `import '${file}'`).join('\n')
 
     return `
 ${cssImport}
@@ -473,6 +547,8 @@ import {
   runGlobalPrefetch,
   runPagePrefetch,
   devalueParse,
+  initI18n,
+  loadRegisteredDictionaries,
 } from '@tusten/core/client'
 import {
   findRouteById,
@@ -498,7 +574,7 @@ async function hydrateSlicesFromState(stateObj, registry) {
       console.warn('[tusten] slice class not loaded for "' + name + '":', err)
       slice = new Slice()
     }
-    slice.hydrate(info.state)
+    slice.hydrate(info.state, info.config)
     if (info.scope === 'global') registry.setGlobal(name, slice)
     else registry.setPage(name, slice)
   }))
@@ -555,8 +631,9 @@ function fullMiddlewareChain(route) {
  * @param {SliceRegistry} registry реестр слайсов.
  * @param {object} navTarget навигационный target.
  * @param {boolean} skipExisting пропустить загруженные глобальные.
+ * @param {SliceRegistry} [pageRegistry] куда класть page-слайсы (по умолчанию — registry).
  */
-async function clientPrefetch(route, registry, navTarget, skipExisting) {
+async function clientPrefetch(route, registry, navTarget, skipExisting, pageRegistry) {
   const ctx = {
     route,
     globalRegistry: globalFactories,
@@ -571,15 +648,21 @@ async function clientPrefetch(route, registry, navTarget, skipExisting) {
     },
   }
   const globalStates = await runGlobalPrefetch(ctx, { skipExisting })
-  await runPagePrefetch(ctx, globalStates)
+  await runPagePrefetch(
+    pageRegistry ? { ...ctx, registry: pageRegistry } : ctx,
+    globalStates,
+  )
 }
 
 async function main() {
   const rootEl = document.getElementById('root')
   if (!rootEl) throw new Error('tusten: #root element not found')
 
-  const LoadingComp = (await resolveComponent(components.loading)) || RootLoading
-  const ErrorComp = (await resolveComponent(components.error)) || undefined
+  // Locale и словари из HTML — до импорта модулей маршрута: их createRk-инстансы
+  // создаются именно при импорте и сразу берут свой словарь.
+  if (window.__ROOT_I18N__) initI18n(window.__ROOT_I18N__)
+
+  const isSsr = window.__ROOT_SSR__ === true
 
   const initialPath = window.location.pathname
   const initialMatch = matchRoute(initialPath)
@@ -601,13 +684,27 @@ async function main() {
       { sliceRegistry: nfRegistry, router: notFoundRouter },
       createElement(NotFoundComp),
     )
-    if (window.__ROOT_SSR__ === true) {
+    if (isSsr) {
       hydrateRoot(rootEl, nfTree)
     } else {
       createRoot(rootEl).render(nfTree)
     }
     return
   }
+
+  // Независимые чанки стартуют сразу, а не цепочкой: на 3G каждый
+  // последовательный await — отдельный RTT. Loading нужен только в SPA:
+  // при SSR его чанк не качаем. Ошибка загрузки кастомного Error не должна
+  // ронять гидратацию — уходим на дефолтный boundary.
+  const errorCompP = resolveComponent(components.error)
+    .then((c) => c || undefined)
+    .catch((err) => {
+      console.warn('[tusten] failed to load custom error component:', err)
+      return undefined
+    })
+  const loadingCompP = isSsr
+    ? null
+    : resolveComponent(components.loading).then((c) => c || RootLoading)
 
   const initialParams = initialMatch ? initialMatch.params : {}
 
@@ -621,9 +718,16 @@ async function main() {
   }
 
   let rootRef
+  let navSeq = 0
 
   const renderTree = async (route) => {
-    const { Template, Layouts } = await loadRouteModules(route)
+    const [{ Template, Layouts }, ErrorComp] = await Promise.all([
+      loadRouteModules(route),
+      errorCompP,
+    ])
+    // Словари после импорта модулей: только тогда известно, какие rk-функции существуют.
+    // Уже засеянные из HTML словари сетевых запросов не вызывают.
+    await loadRegisteredDictionaries()
     const child = createElement(Template)
     return createElement(
       RootErrorBoundary,
@@ -653,23 +757,31 @@ async function main() {
       return
     }
 
+    // Готовим page-слайсы новой страницы в отдельном реестре: старую
+    // страницу убиваем только после успешного prefetch + загрузки шаблона,
+    // иначе при ошибке пользователь остался бы на живой странице
+    // с мёртвыми слайсами.
+    const nextPages = new SliceRegistry()
+    // Токен навигации: при быстрых кликах побеждает последний, устаревший
+    // переход не должен перезаписать более свежую страницу.
+    const navId = ++navSeq
+    let newTree
     try {
-      sliceRegistry.disposePage()
-      await clientPrefetch(to.route, sliceRegistry, to, true)
+      // Данные и чанки шаблона/layout независимы — грузим параллельно.
+      ;[, newTree] = await Promise.all([
+        clientPrefetch(to.route, sliceRegistry, to, true, nextPages),
+        renderTree(to.route),
+      ])
     } catch (err) {
+      nextPages.disposePage()
       console.error('[tusten] client prefetch failed:', err)
       return
     }
-
-    const newTree = await renderTree(to.route)
-
-    const meta = await resolveMeta(
-      to.route,
-      { id: to.route.id, path: to.pathname, params: to.params, query: to.query, request: null },
-      window.location.href,
-      resolveModule,
-    )
-    document.title = meta.title
+    if (navId !== navSeq) {
+      nextPages.disposePage()
+      return
+    }
+    sliceRegistry.adoptPage(nextPages)
 
     if (mode === 'replace') {
       window.history.replaceState({}, '', path)
@@ -688,6 +800,22 @@ async function main() {
     rootRef.render(
       createElement(RootProvider, { sliceRegistry, router: newRouter }, newTree),
     )
+
+    // Meta (может быть RPC) не блокирует переход: страница уже показана.
+    // Только для маршрутов с metaConfig — иначе title из route не затирается
+    // дефолтным заголовком. Устаревший ответ (юзер ушёл дальше) игнорируем.
+    if (to.route.metaConfig) {
+      void resolveMeta(
+        to.route,
+        { id: to.route.id, path: to.pathname, params: to.params, query: to.query, request: null },
+        window.location.href,
+        resolveModule,
+      )
+        .then((meta) => {
+          if (navId === navSeq) document.title = meta.title
+        })
+        .catch((err) => console.debug('[tusten] meta skipped:', err))
+    }
   }
 
   window.__rootNavigate = {
@@ -697,15 +825,22 @@ async function main() {
     prefetch: async (p) => {
       const to = buildNavTarget(p)
       if (!to.route) return
+      // Временный реестр: реальная работа идёт в TustenService cache.
+      // При клике clientPrefetch выполнится снова, но service-вызовы
+      // возьмутся из кэша → мгновенно. Сами слайсы-заготовки не нужны.
+      const tempRegistry = new SliceRegistry()
       try {
-        // Временный registry — реальная работа идёт в TustenService cache.
-        // При клике clientPrefetch выполнится снова, но service-вызовы
-        // возьмутся из кэша → мгновенно.
-        const tempRegistry = new SliceRegistry()
-        await clientPrefetch(to.route, tempRegistry, to, false)
+        // Греем и данные, и чанки шаблона/layout: иначе клик всё равно
+        // ждёт загрузки шаблона.
+        await Promise.all([
+          clientPrefetch(to.route, tempRegistry, to, false),
+          loadRouteModules(to.route),
+        ])
       } catch (err) {
         // Prefetch — best-effort. Ошибки не блокируют клик.
         console.debug('[tusten] prefetch skipped:', err)
+      } finally {
+        tempRegistry.disposePage()
       }
     },
   }
@@ -715,9 +850,8 @@ async function main() {
   })
 
   const initialRouter = currentRouter
-  const initialTree = await renderTree(initialRoute)
 
-  if (window.__ROOT_SSR__ === true) {
+  if (isSsr) {
     let stateObj
     try {
       stateObj = window.__ROOT_STATE_STR__
@@ -727,13 +861,26 @@ async function main() {
       console.warn('[tusten] failed to parse __ROOT_STATE_STR__:', err)
       stateObj = undefined
     }
-    await hydrateSlicesFromState(stateObj, sliceRegistry)
+    // Чанки шаблона/layout и классы слайсов грузятся параллельно:
+    // это последний водопад перед hydrateRoot.
+    const [initialTree] = await Promise.all([
+      renderTree(initialRoute),
+      hydrateSlicesFromState(stateObj, sliceRegistry),
+    ])
     rootRef = hydrateRoot(
       rootEl,
       createElement(RootProvider, { sliceRegistry, router: initialRouter }, initialTree),
+      {
+        // Mismatch React чинит клиентским рендером (со скачком вёрстки):
+        // делаем его заметным, а не молчаливым.
+        onRecoverableError: (err) => {
+          console.error('[tusten] hydration mismatch (client re-render):', err)
+        },
+      },
     )
   } else {
-    // Показываем Loading, пока идёт prefetch.
+    // Шаблон и Loading грузятся параллельно; Loading показываем, пока идёт prefetch.
+    const [initialTree, LoadingComp] = await Promise.all([renderTree(initialRoute), loadingCompP])
     rootRef = createRoot(rootEl)
     rootRef.render(
       createElement(
@@ -757,6 +904,7 @@ async function main() {
       )
     } catch (err) {
       console.error('[tusten] initial prefetch failed:', err)
+      const ErrorComp = await errorCompP
       const errorNode = ErrorComp
         ? createElement(ErrorComp, { error: err })
         : createElement(
@@ -811,6 +959,10 @@ export {
   RootErrorBoundary,
   RootLoading,
   RootNotFound,
+  setLocaleResolver,
+  setI18nUsageHook,
+  loadRegisteredDictionaries,
+  getRegisteredDictionary,
 } from '@tusten/core/client'
 
 export const modules = {

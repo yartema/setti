@@ -23,7 +23,7 @@ export interface BuildProjectOptions {
 export async function buildProject(options: BuildProjectOptions): Promise<void> {
     const { projectDir, config, routeTree, scanResult, factoryModules, globalRegistry } = options
     void scanResult
-    const clientDir = path.resolve(projectDir, config.clientDir)
+    const clientDir = path.resolve(projectDir, config.client.clientDir)
     const outDir = path.resolve(projectDir, config.build.outDir)
     const clientOut = path.join(outDir, 'client')
     const serverOut = path.join(outDir, 'server')

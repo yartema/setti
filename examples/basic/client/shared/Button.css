@@ -1,4 +1,4 @@
-.nixo-btn {
+.tusten-btn {
     background: #4f46e5;
     color: white;
     padding: 8px 16px;
@@ -7,6 +7,6 @@
     border: none;
     cursor: pointer;
 }
-.nixo-btn:hover {
+.tusten-btn:hover {
     background: #4338ca;
 }

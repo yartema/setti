@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import { stringify as devalueStringify } from 'devalue'
+import { toVitePath } from '../utils/fs'
 import type { PrefetchSliceInfo } from './prefetch'
 
 /**
@@ -19,6 +20,13 @@ export interface SerializedState {
             modulePath: string
             exportName: string
             state: unknown
+            /**
+             * `dataFactoryArguments` фабрики — второй аргумент `_initState`.
+             *
+             * Нужен на клиенте: `_initState` вызывается и при SSR-гидратации,
+             * где `prefetchConfig` (и `getConfig`) недоступен.
+             */
+            config?: Record<string, unknown>
             scope: 'page' | 'global'
         }
     >
@@ -60,8 +68,11 @@ async function resolveModulePath(
     for (const ext of ['.tsx', '.ts', '.jsx', '.js', '']) {
         const abs = absBase + ext
         if (await fileExists(abs)) {
-            const fromRoot = '/' + path.relative(projectDir, abs).replace(/\\/g, '/')
-            return { modulePath: fromRoot, exportName }
+            // Канонизируем регистр: `modulePath` уходит на клиент как ключ
+            // `moduleLoaders`, при рассинхроне (`view.tsx` vs `View.tsx`) HMR
+            // не сработает.
+            const modulePath = toVitePath(projectDir, abs)
+            return { modulePath, exportName }
         }
     }
     throw new Error(`Module not found: ${spec} (resolved from ${absBase})`)
@@ -88,6 +99,7 @@ export async function serializeState(
             modulePath,
             exportName,
             state: info.state,
+            config: info.config,
             scope: info.scope,
         }
     }

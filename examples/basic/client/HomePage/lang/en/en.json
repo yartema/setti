@@ -1,0 +1,9 @@
+{
+    "Изменить": "To change",
+    "Кнопка с локальным": "Button with local",
+    "перезагрузить": "reload",
+    "Изменить имя": "Change the name",
+    "Привет, {name}!": "Hello, {name}!",
+    "{n, plural, one {# пользователь} few {# пользователя} many {# пользователей} other {# пользователя}}": "{n, plural, one {# user} other {# users}}",
+    "Язык интерфейса": "Interface language"
+}

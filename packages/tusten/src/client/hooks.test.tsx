@@ -11,7 +11,7 @@ import { useSliceRef } from './hooks/useSliceRef'
 import { usePathname } from './hooks/usePathname'
 import { useParams } from './hooks/useParams'
 import { useQuery } from './hooks/useQuery'
-import { useRouter } from './hooks/useRouter'
+import { getRouter, useRouter } from './hooks/useRouter'
 import { Link } from './Link'
 import type { TustenClientRouter } from '../types'
 import { usePageMeta } from './hooks/usePageMeta'
@@ -311,6 +311,31 @@ describe('React hooks', () => {
             await result.current.prefetch('/about')
             const nav = (globalThis as { __rootNavigate?: { prefetch: ReturnType<typeof vi.fn> } }).__rootNavigate!
             expect(nav.prefetch).toHaveBeenCalledWith('/about')
+        })
+
+        it('getRouter работает вне <RootProvider>', async () => {
+            await getRouter().push('/about')
+            const nav = (globalThis as { __rootNavigate?: { push: ReturnType<typeof vi.fn> } }).__rootNavigate!
+            expect(nav.push).toHaveBeenCalledWith('/about')
+        })
+
+        it('useRouter не требует <RootProvider>', () => {
+            const { result } = renderHook(() => useRouter())
+            expect(typeof result.current.push).toBe('function')
+        })
+
+        it('до инициализации client-entry — запасной навигатор', () => {
+            const g = globalThis as { __rootNavigate?: unknown }
+            const saved = g.__rootNavigate
+            delete g.__rootNavigate
+            try {
+                const back = vi.spyOn(window.history, 'back').mockImplementation(() => {})
+                getRouter().back()
+                expect(back).toHaveBeenCalled()
+                back.mockRestore()
+            } finally {
+                g.__rootNavigate = saved
+            }
         })
     })
 

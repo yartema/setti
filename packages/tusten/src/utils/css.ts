@@ -2,20 +2,17 @@ import path from 'node:path'
 import type { ResolvedTustenConfig } from '../types'
 
 /**
- * Резолвит `config.css.main` в Vite-путь от `projectDir`
- * (`/client/styles/main.css`).
+ * Резолвит `config.client.css` в Vite-пути от `projectDir`
+ * (`styles/main.css` → `/client/styles/main.css`).
  *
  * @param projectDir корень проекта.
  * @param clientDir клиентский каталог.
  * @param config нормализованный конфиг.
- * @returns Vite-путь или undefined, если `css.main` не задан.
+ * @returns Vite-пути до глобальных CSS (пустой массив, если не заданы).
  */
-export function resolveCssMainPath(
-    projectDir: string,
-    clientDir: string,
-    config: ResolvedTustenConfig,
-): string | undefined {
-    if (!config.css.main) return undefined
-    const abs = path.resolve(clientDir, config.css.main)
-    return '/' + path.relative(projectDir, abs).replace(/\\/g, '/')
+export function resolveCssPaths(projectDir: string, clientDir: string, config: ResolvedTustenConfig): string[] {
+    return config.client.css.map((rel) => {
+        const abs = path.resolve(clientDir, rel)
+        return '/' + path.relative(projectDir, abs).replace(/\\/g, '/')
+    })
 }

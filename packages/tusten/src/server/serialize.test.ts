@@ -40,6 +40,7 @@ describe('serializeState', () => {
                 {
                     dataFactoryName: 'HomePage/Factories/usersList:UserListLoader',
                     state: [{ id: 1 }],
+                    config: { limit: 10 },
                     scope: 'page' as const,
                 },
             ],
@@ -49,8 +50,17 @@ describe('serializeState', () => {
             modulePath: '/client/HomePage/Factories/usersList.ts',
             exportName: 'UserListLoader',
             state: [{ id: 1 }],
+            config: { limit: 10 },
             scope: 'page',
         })
+    })
+
+    it('без config — undefined (совместимость со снимками до P0.2)', async () => {
+        const slices = new Map([
+            ['a', { dataFactoryName: 'A:LoaderA', state: 1, scope: 'page' as const }],
+        ])
+        const result = await serializeState(slices, tmpRoot, clientDir)
+        expect(result.slices.a.config).toBeUndefined()
     })
 
     it('глобальный слайс — scope: global', async () => {

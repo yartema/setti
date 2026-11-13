@@ -3,27 +3,49 @@ import { buildManifest } from './manifest'
 import type { ResolvedTustenConfig, TustenRoute, ScanResult } from './types'
 
 /**
+ * Переопределения конфига: верхний уровень — shallow, `client`/`server` — частично.
+ */
+type ConfigOverrides = Partial<Omit<ResolvedTustenConfig, 'client' | 'server'>> & {
+    client?: Partial<ResolvedTustenConfig['client']>
+    server?: Partial<ResolvedTustenConfig['server']>
+}
+
+/**
  * Минимальный `ResolvedTustenConfig` для тестов.
  *
  * @param overrides переопределения.
  * @returns конфиг.
  */
-function makeConfig(overrides: Partial<ResolvedTustenConfig> = {}): ResolvedTustenConfig {
-    return {
+function makeConfig(overrides: ConfigOverrides = {}): ResolvedTustenConfig {
+    const base: ResolvedTustenConfig = {
         ssr: true,
-        clientDir: 'client',
-        serverDir: 'server',
-        layouts: {},
-        components: { error: null, loading: null, notFound: null },
-        server: { port: 3000, host: '0.0.0.0', routes: null, plugins: null },
-        fastify: {},
-        rpc: { enabled: true, url: '/service', describe: true },
+        client: {
+            clientDir: 'client',
+            layouts: {},
+            css: [],
+            components: { error: null, loading: null, notFound: null },
+        },
+        server: {
+            serverDir: 'server',
+            port: 3000,
+            host: '0.0.0.0',
+            routes: null,
+            plugins: null,
+            rpc: { enabled: true, url: '/service', describe: true },
+        },
         middleware: [],
-        css: { main: '' },
         vite: {},
         build: { outDir: 'dist' },
+        runtimeConfig: { public: {} },
+        i18n: null,
+    }
+
+    return {
+        ...base,
         ...overrides,
-    } as ResolvedTustenConfig
+        client: { ...base.client, ...overrides.client },
+        server: { ...base.server, ...overrides.server },
+    }
 }
 
 /**
@@ -74,7 +96,7 @@ describe('buildManifest', () => {
                     },
                 ],
             }),
-            makeConfig({ layouts: { main: './l/Main.tsx' } }),
+            makeConfig({ client: { layouts: { main: './l/Main.tsx' } } }),
             '/proj/client',
         )
         expect(m.modules['HomePage/router']).toEqual({
@@ -104,9 +126,11 @@ describe('buildManifest', () => {
         const m = buildManifest(
             makeScan(),
             makeConfig({
-                layouts: {
-                    main: './layouts/Main.tsx',
-                    admin: './layouts/Admin.tsx',
+                client: {
+                    layouts: {
+                        main: './layouts/Main.tsx',
+                        admin: './layouts/Admin.tsx',
+                    },
                 },
             }),
             '/proj/client',
@@ -134,7 +158,7 @@ describe('buildManifest', () => {
                     },
                 ],
             }),
-            makeConfig({ layouts: { main: './l' } }),
+            makeConfig({ client: { layouts: { main: './l' } } }),
             '/proj/client',
         )
         expect(m.modules['X/view']?.kind).toBe('component')
@@ -159,7 +183,7 @@ describe('buildManifest', () => {
                     },
                 ],
             }),
-            makeConfig({ layouts: { main: './l' } }),
+            makeConfig({ client: { layouts: { main: './l' } } }),
             '/proj/client',
         )
         expect(m.modules['X/Factories/Root']?.kind).toBe('config')
@@ -174,7 +198,7 @@ describe('buildManifest', () => {
                 },
             ],
         })
-        const config = makeConfig({ layouts: { main: './l' } })
+        const config = makeConfig({ client: { layouts: { main: './l' } } })
         const m1 = buildManifest(scan, config, '/proj/client')
         const m2 = buildManifest(scan, config, '/proj/client')
         expect(m1.version).toBe(m2.version)
@@ -191,7 +215,7 @@ describe('buildManifest', () => {
                     },
                 ],
             }),
-            makeConfig({ layouts: { main: './l' } }),
+            makeConfig({ client: { layouts: { main: './l' } } }),
             '/proj/client',
         )
         expect(m1.version).not.toBe(m2.version)
@@ -216,7 +240,7 @@ describe('buildManifest', () => {
                     },
                 ],
             }),
-            makeConfig({ layouts: { main: './l' } }),
+            makeConfig({ client: { layouts: { main: './l' } } }),
             '/proj/client',
         )
         expect(m.modules['A/view']).toBeDefined()

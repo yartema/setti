@@ -2,6 +2,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { ViteDevServer } from 'vite'
 import { TustenError } from '../errors'
+import { resolveRealPath } from '../utils/fs'
 
 /**
  * Dev-загрузчик модулей через `vite.ssrLoadModule`.
@@ -13,7 +14,9 @@ import { TustenError } from '../errors'
 export function createDevModuleLoader(clientDir: string, vite: ViteDevServer): (spec: string) => Promise<unknown> {
     return async (spec: string): Promise<unknown> => {
         const [file, exportName] = spec.split(':')
-        const abs = path.resolve(clientDir, file)
+        // Канонизируем регистр: иначе модуль грузится под `view.tsx`,
+        // а watcher сообщает `View.tsx` — и HMR не инвалидирует его.
+        const abs = resolveRealPath(path.resolve(clientDir, file))
         const mod = (await vite.ssrLoadModule(abs)) as Record<string, unknown>
         const value = exportName ? mod[exportName] : mod.default
         if (value === undefined) {

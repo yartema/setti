@@ -1,4 +1,3 @@
-import type { UserConfig } from 'vite'
 import type { FactoryMap, ResolvedTustenConfig, RouteTree } from '../types';
 import { tustenPlugin } from '../vite/plugin'
 
@@ -25,7 +24,7 @@ export async function buildServer(options: BuildServerOptions): Promise<void> {
         options
     const { build } = await import('vite')
     const react = (await import('@vitejs/plugin-react')).default
-    const userVite = (config.vite ?? {}) as UserConfig
+    const userVite = config.vite ?? {}
 
     await build({
         ...userVite,
@@ -35,7 +34,7 @@ export async function buildServer(options: BuildServerOptions): Promise<void> {
         plugins: [
             tustenPlugin({ projectDir, clientDir, config, routeTree, factoryModules, globalFactories: globalRegistry }),
             react(),
-            ...((userVite.plugins as import('vite').Plugin[]) ?? []),
+            ...(userVite.plugins ?? []),
         ],
         resolve: { ...(userVite.resolve ?? {}), preserveSymlinks: false },
         ssr: {

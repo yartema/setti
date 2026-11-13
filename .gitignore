@@ -50,6 +50,11 @@ coverage/
 *.sublime-workspace
 *.sublime-project
 
+# OpenCode (локальные команды/сессии)
+.opencode/
+AGENTS.md
+ARCHITECTURE.md
+
 # === OS ===
 .DS_Store
 .DS_Store?
@@ -79,4 +84,10 @@ tmp/
 .eslintcache
 .stylelintcache
 .parcel-cache/
+
+# === Generated docs ===
+# Копии корневых файлов: packages/tusten/package.json → "prepack"
+# (copyFileSync('../../README.md' | '../../CHANGELOG.md')). Правим только корневые.
+packages/tusten/README.md
+packages/tusten/CHANGELOG.md
 packages/setti/README.md

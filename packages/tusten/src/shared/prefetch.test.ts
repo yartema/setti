@@ -258,6 +258,34 @@ describe('runPagePrefetch', () => {
         expect([...states.slices.keys()].sort()).toEqual(['UserList', 'userInfo'])
     })
 
+    it('config (dataFactoryArguments) попадает в slices — для гидратации на клиенте', async () => {
+        const reg = makeRegistry()
+        const route = makeRoute()
+        const globalRegistry: FactoryMap = {
+            userInfo: { dataFactoryName: 'g:u', dataFactoryArguments: { locale: 'ru' } },
+        }
+        const factoryMap: FactoryMap = {
+            UserList: { dataFactoryName: 'p:list', dataFactoryArguments: { limit: 10 } },
+        }
+        const result = await runPagePrefetch(
+            {
+                route,
+                globalRegistry,
+                loadModule: makeLoadModule({
+                    'g:u': makeImpl('global'),
+                    'p:list': makeImpl('page'),
+                    'Root:getConfig': () => factoryMap,
+                }),
+                registry: reg as never,
+                router: makeRouter(),
+            },
+            new Map([['userInfo', { global: true }]]),
+        )
+
+        expect(result.slices.get('UserList')?.config).toEqual({ limit: 10 })
+        expect(result.slices.get('userInfo')?.config).toEqual({ locale: 'ru' })
+    })
+
     it('A3: коллизии global vs page → ошибка', async () => {
         const reg = makeRegistry()
         const route = makeRoute()
@@ -413,5 +441,165 @@ describe('runPrefetch (facade)', () => {
         })
         expect([...result.slices.keys()].sort()).toEqual(['Users', 'userInfo'])
         expect(reg.size()).toBe(2)
+    })
+})
+
+describe('параллельная загрузка фабрик', () => {
+    /**
+     * Фабрика с управляемой задержкой, фиксирует порядок старта и конца `loadData`.
+     *
+     * @param name имя в журнале.
+     * @param ms задержка `loadData`.
+     * @param log журнал событий.
+     * @returns impl.
+     */
+    function timedImpl(name: string, ms: number, log: string[]): FactoryImplementation {
+        return {
+            loadData: async (_args, depsMap) => {
+                log.push(`start:${name}`)
+                await new Promise((r) => setTimeout(r, ms))
+                log.push(`end:${name}`)
+                return { name, deps: Object.keys(depsMap) }
+            },
+            slice: AnySlice,
+        }
+    }
+
+    it('page: независимые фабрики стартуют одновременно, а не по очереди', async () => {
+        const log: string[] = []
+        const factoryMap: FactoryMap = {
+            a: { dataFactoryName: 'm:a' },
+            b: { dataFactoryName: 'm:b' },
+            c: { dataFactoryName: 'm:c' },
+        }
+        const started = Date.now()
+        await runPagePrefetch(
+            {
+                route: makeRoute(),
+                globalRegistry: {},
+                loadModule: makeLoadModule({
+                    'm:a': timedImpl('a', 60, log),
+                    'm:b': timedImpl('b', 60, log),
+                    'm:c': timedImpl('c', 60, log),
+                    'Root:getConfig': () => factoryMap,
+                }),
+                registry: makeRegistry() as never,
+                router: makeRouter(),
+            },
+            new Map(),
+        )
+        // Все три `loadData` начались до завершения первого.
+        expect(log.slice(0, 3).sort()).toEqual(['start:a', 'start:b', 'start:c'])
+        // ~60 мс, а не ~180 (с запасом на таймеры CI).
+        expect(Date.now() - started).toBeLessThan(150)
+    })
+
+    it('page: зависимая фабрика ждёт зависимость и получает её данные', async () => {
+        const log: string[] = []
+        const factoryMap: FactoryMap = {
+            a: { dataFactoryName: 'm:a' },
+            b: { dataFactoryName: 'm:b', dependencies: ['a'] },
+        }
+        const result = await runPagePrefetch(
+            {
+                route: makeRoute(),
+                globalRegistry: {},
+                loadModule: makeLoadModule({
+                    'm:a': timedImpl('a', 30, log),
+                    'm:b': timedImpl('b', 1, log),
+                    'Root:getConfig': () => factoryMap,
+                }),
+                registry: makeRegistry() as never,
+                router: makeRouter(),
+            },
+            new Map(),
+        )
+        expect(log).toEqual(['start:a', 'end:a', 'start:b', 'end:b'])
+        expect((result.states.get('b') as { deps: string[] }).deps).toEqual(['a'])
+    })
+
+    it('page: порядок slices и registry — топологический, не по скорости завершения', async () => {
+        const log: string[] = []
+        const reg = makeRegistry()
+        const order: string[] = []
+        reg.setPage = (k: string) => {
+            order.push(k)
+            return undefined as never
+        }
+        const factoryMap: FactoryMap = {
+            slow: { dataFactoryName: 'm:slow' },
+            fast: { dataFactoryName: 'm:fast' },
+        }
+        const result = await runPagePrefetch(
+            {
+                route: makeRoute(),
+                globalRegistry: {},
+                loadModule: makeLoadModule({
+                    'm:slow': timedImpl('slow', 50, log),
+                    'm:fast': timedImpl('fast', 1, log),
+                    'Root:getConfig': () => factoryMap,
+                }),
+                registry: reg as never,
+                router: makeRouter(),
+            },
+            new Map(),
+        )
+        expect(log.indexOf('end:fast')).toBeLessThan(log.indexOf('end:slow'))
+        expect([...result.slices.keys()]).toEqual(['slow', 'fast'])
+        expect(order).toEqual(['slow', 'fast'])
+    })
+
+    it('page: ошибка одной фабрики отклоняет весь prefetch', async () => {
+        const factoryMap: FactoryMap = {
+            ok: { dataFactoryName: 'm:ok' },
+            bad: { dataFactoryName: 'm:bad' },
+        }
+        await expect(
+            runPagePrefetch(
+                {
+                    route: makeRoute(),
+                    globalRegistry: {},
+                    loadModule: makeLoadModule({
+                        'm:ok': makeImpl('ok'),
+                        'm:bad': {
+                            loadData: async () => {
+                                throw new Error('boom')
+                            },
+                            slice: AnySlice,
+                        },
+                        'Root:getConfig': () => factoryMap,
+                    }),
+                    registry: makeRegistry() as never,
+                    router: makeRouter(),
+                },
+                new Map(),
+            ),
+        ).rejects.toThrow('boom')
+    })
+
+    it('global: независимые загрузчики идут параллельно, зависимый — после', async () => {
+        const log: string[] = []
+        const globalRegistry: FactoryMap = {
+            g1: { dataFactoryName: 'm:g1' },
+            g2: { dataFactoryName: 'm:g2' },
+            g3: { dataFactoryName: 'm:g3', dependencies: ['g1'] },
+        }
+        const states = await runGlobalPrefetch(
+            {
+                route: makeRoute(['g1', 'g2', 'g3']),
+                globalRegistry,
+                loadModule: makeLoadModule({
+                    'm:g1': timedImpl('g1', 40, log),
+                    'm:g2': timedImpl('g2', 40, log),
+                    'm:g3': timedImpl('g3', 1, log),
+                }),
+                registry: makeRegistry() as never,
+                router: makeRouter(),
+            },
+            {},
+        )
+        expect(log.indexOf('start:g2')).toBeLessThan(log.indexOf('end:g1'))
+        expect(log.indexOf('start:g3')).toBeGreaterThan(log.indexOf('end:g1'))
+        expect((states.get('g3') as { deps: string[] }).deps).toEqual(['g1'])
     })
 })

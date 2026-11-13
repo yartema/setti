@@ -1,8 +1,37 @@
 import path from 'node:path'
 import { createJiti } from 'jiti'
-import type { TustenConfig, ResolvedTustenConfig } from './types'
+import type { TustenConfig, ResolvedTustenConfig, TustenI18nConfig } from './types'
 import { TustenError } from './errors'
 import { fileExists } from './utils/fs'
+import { isValidLocale } from './shared/locale'
+
+/**
+ * Нормализует секцию `i18n`. Отсутствие секции — не ошибка, а выключенная фича.
+ *
+ * @param raw сырой объект из `tusten.config.ts`.
+ * @returns нормализованные настройки или `null`.
+ * @throws {TustenError} если `locales` пуст, содержит некорректный формат
+ *   или `defaultLocale` не входит в `locales`.
+ */
+export function normalizeI18n(raw: TustenI18nConfig | undefined): TustenI18nConfig | null {
+    if (raw === undefined) return null
+
+    const { defaultLocale, locales } = raw
+    if (!Array.isArray(locales) || locales.length === 0) {
+        throw new TustenError('i18n.locales must be a non-empty array of locale codes')
+    }
+    for (const locale of locales) {
+        if (!isValidLocale(locale)) {
+            throw new TustenError(`i18n.locales contains invalid locale "${String(locale)}" (expected e.g. "en", "pt-BR")`)
+        }
+    }
+    if (!locales.includes(defaultLocale)) {
+        throw new TustenError(`i18n.defaultLocale "${defaultLocale}" must be one of i18n.locales [${locales.join(', ')}]`)
+    }
+
+    // Дубликаты не несут смысла и могли бы породить двойные записи в реестре словарей.
+    return { defaultLocale, locales: [...new Set(locales)] }
+}
 
 /**
  * Загружает `tusten.config.ts` из указанного каталога.
@@ -45,43 +74,46 @@ export async function loadConfig(projectDir: string): Promise<ResolvedTustenConf
     }
 
     // Нормализуем дефолты — единая точка, где заданы значения по умолчанию.
+    const rpcConfig = mod.server?.rpc
+
     return {
         ssr: mod.ssr ?? true,
-        clientDir: mod.clientDir ?? 'client',
-        serverDir: mod.serverDir ?? 'server',
-        layouts: mod.layouts ?? {},
-        middleware: mod.middleware ?? [],
+        client: {
+            clientDir: mod.client?.clientDir ?? 'client',
+            layouts: mod.client?.layouts ?? {},
+            css: mod.client?.css ?? [],
+            components: {
+                error: mod.client?.components?.error ?? null,
+                loading: mod.client?.components?.loading ?? null,
+                notFound: mod.client?.components?.notFound ?? null,
+            },
+        },
         server: {
+            serverDir: mod.server?.serverDir ?? 'server',
             port: mod.server?.port ?? 3000,
             host: mod.server?.host ?? 'localhost',
             routes: mod.server?.routes ?? null,
             plugins: mod.server?.plugins ?? null,
+            rpc:
+                rpcConfig === false
+                    ? {
+                          enabled: false,
+                          url: '/service',
+                          describe: false,
+                          extendContext: undefined,
+                      }
+                    : {
+                          enabled: rpcConfig?.enabled ?? true,
+                          url: rpcConfig?.url ?? '/service',
+                          describe: rpcConfig?.describe ?? true,
+                          extendContext: rpcConfig?.extendContext,
+                      },
         },
+        middleware: mod.middleware ?? [],
         vite: mod.vite ?? {},
         build: { outDir: mod.build?.outDir ?? 'dist' },
-        css: {
-            main: mod.css?.main ?? 'styles/main.css',
-        },
         runtimeConfig: { public: mod.runtimeConfig?.public ?? {} },
         fastify: mod.fastify ?? {},
-        rpc:
-            mod.rpc === false
-                ? {
-                      enabled: false,
-                      url: '/service',
-                      describe: false,
-                      extendContext: undefined,
-                  }
-                : {
-                      enabled: mod.rpc?.enabled ?? true,
-                      url: mod.rpc?.url ?? '/service',
-                      describe: mod.rpc?.describe ?? true,
-                      extendContext: mod.rpc?.extendContext,
-                  },
-        components: {
-            error: mod.components?.error ?? null,
-            loading: mod.components?.loading ?? null,
-            notFound: mod.components?.notFound ?? null,
-        },
+        i18n: normalizeI18n(mod.i18n),
     }
 }

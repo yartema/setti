@@ -6,26 +6,30 @@ import tailwindcss from '@tailwindcss/vite'
  */
 export default defineConfig({
     ssr: true,
-    layouts: {
-        main: './layouts/Main.tsx',
-        admin: './layouts/Admin.tsx',
-    },
-    css: {
-        main: 'styles/main.css',
-    },
-    vite: {
-        plugins: [tailwindcss()],
+    client: {
+        layouts: {
+            main: './layouts/Main.tsx',
+            admin: './layouts/Admin.tsx',
+        },
+        css: ['styles/main.css'],
+        components: {
+            error: 'shared/ErrorBoundary:ErrorBoundary',
+            loading: 'shared/Loading:Loading',
+            notFound: 'shared/NotFound:NotFound',
+        },
     },
     server: {
         routes: 'server/api/routes.ts',
     },
+    i18n: {
+        defaultLocale: 'ru',
+        locales: ['en', 'ru'],
+    },
+    vite: {
+        plugins: [tailwindcss()],
+    },
     middleware: [{ id: 'logger', handler: 'client/shared/middleware/logger', side: 'both' }],
     fastify: {
         logger: false,
-    },
-    components: {
-        error: 'shared/ErrorBoundary:ErrorBoundary',
-        loading: 'shared/Loading:Loading',
-        notFound: 'shared/NotFound:NotFound',
     },
 })

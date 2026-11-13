@@ -3,6 +3,14 @@ import { buildRouteTree } from './route-tree'
 import type { MiddlewareDef, ResolvedTustenConfig, TustenRoute } from './types'
 
 /**
+ * Переопределения конфига: верхний уровень — shallow, `client`/`server` — частично.
+ */
+type ConfigOverrides = Partial<Omit<ResolvedTustenConfig, 'client' | 'server'>> & {
+    client?: Partial<ResolvedTustenConfig['client']>
+    server?: Partial<ResolvedTustenConfig['server']>
+}
+
+/**
  * Минимальный `ResolvedTustenConfig` для тестов.
  *
  * Поля, которые не важны для `buildRouteTree`, заполнены дефолтами.
@@ -11,22 +19,36 @@ import type { MiddlewareDef, ResolvedTustenConfig, TustenRoute } from './types'
  * @param overrides переопределения.
  * @returns конфиг.
  */
-function makeConfig(overrides: Partial<ResolvedTustenConfig> = {}): ResolvedTustenConfig {
-    return {
+function makeConfig(overrides: ConfigOverrides = {}): ResolvedTustenConfig {
+    const base: ResolvedTustenConfig = {
         ssr: true,
-        clientDir: 'client',
-        serverDir: 'server',
-        layouts: { main: './layouts/Main.tsx' },
-        components: { error: null, loading: null, notFound: null },
-        server: { port: 3000, host: '0.0.0.0', routes: null, plugins: null },
-        fastify: {},
-        rpc: { enabled: true, url: '/service', describe: true },
+        client: {
+            clientDir: 'client',
+            layouts: { main: './layouts/Main.tsx' },
+            css: [],
+            components: { error: null, loading: null, notFound: null },
+        },
+        server: {
+            serverDir: 'server',
+            port: 3000,
+            host: '0.0.0.0',
+            routes: null,
+            plugins: null,
+            rpc: { enabled: true, url: '/service', describe: true },
+        },
         middleware: [],
-        css: { main: 'styles/main.css' },
         vite: {},
         build: { outDir: 'dist' },
+        runtimeConfig: { public: {} },
+        i18n: null,
+    }
+
+    return {
+        ...base,
         ...overrides,
-    } as ResolvedTustenConfig
+        client: { ...base.client, ...overrides.client },
+        server: { ...base.server, ...overrides.server },
+    }
 }
 
 /**
@@ -184,9 +206,11 @@ describe('buildRouteTree', () => {
 
         it('вложенный layout: main → admin', () => {
             const config = makeConfig({
-                layouts: {
-                    main: './layouts/Main.tsx',
-                    admin: './layouts/Admin.tsx',
+                client: {
+                    layouts: {
+                        main: './layouts/Main.tsx',
+                        admin: './layouts/Admin.tsx',
+                    },
                 },
             })
             const parent = makeRoute({ id: 'home', type: 'main', index: true })
@@ -202,10 +226,12 @@ describe('buildRouteTree', () => {
 
         it('трёхуровневая цепочка', () => {
             const config = makeConfig({
-                layouts: {
-                    main: './l/Main',
-                    admin: './l/Admin',
-                    panel: './l/Panel',
+                client: {
+                    layouts: {
+                        main: './l/Main',
+                        admin: './l/Admin',
+                        panel: './l/Panel',
+                    },
                 },
             })
             const root = makeRoute({ id: 'root', type: 'main', index: true })

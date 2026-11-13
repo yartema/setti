@@ -1,9 +1,10 @@
 import path from 'node:path'
-import { promises as fs } from 'node:fs'
+import { existsSync, promises as fs, readdirSync } from 'node:fs'
+import type { Dirent } from 'node:fs'
 import { createJiti } from 'jiti'
-import type { FactoryMap, TustenRoute, ScanResult } from './types'
+import type { FactoryMap, TustenRoute, ScanResult, I18nRegistry, TustenI18nConfig } from './types'
 import { TustenError } from './errors'
-import { fileExists, walkFiles } from './utils/fs'
+import { fileExists, resolveRealPath, walkFiles } from './utils/fs'
 
 /**
  * Сканнер клиентского каталога.
@@ -84,4 +85,46 @@ export async function scan(clientDir: string): Promise<ScanResult> {
     })
 
     return { routeModules, loaderModules }
+}
+
+/**
+ * Сканирует словари i18n: для каждого модуля верхнего уровня в `clientDir`
+ * ищет `lang/<locale>/<locale>.json` для каждой locale из конфига.
+ *
+ * Синхронный намеренно: вызывается из фабрики Vite-плагина, где `await` недоступен.
+ * Не использует jiti — словарь это JSON, его не нужно исполнять.
+ *
+ * Отсутствующие словари пропускаются без ошибки: `rk` тогда вернёт исходный ключ.
+ *
+ * @param clientDir абсолютный путь до `clientDir`.
+ * @param i18n нормализованная настройка i18n; `null` — фича выключена.
+ * @returns реестр `модуль → locale → абсолютный путь`. Модули без словарей не попадают.
+ * @throws {TustenError} если `clientDir` существует, но не читается.
+ */
+export function scanI18n(clientDir: string, i18n: TustenI18nConfig | null): I18nRegistry {
+    const registry: I18nRegistry = {}
+    if (!i18n) return registry
+
+    let entries: Dirent[]
+    try {
+        entries = readdirSync(clientDir, { withFileTypes: true })
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') return registry
+        throw new TustenError(`Failed to read clientDir "${clientDir}": ${(err as Error).message}`)
+    }
+
+    for (const entry of entries) {
+        if (!entry.isDirectory()) continue
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue
+
+        const dicts: Record<string, string> = {}
+        for (const locale of i18n.locales) {
+            const dictPath = path.join(clientDir, entry.name, 'lang', locale, `${locale}.json`)
+            // realpath: путь попадает в watcher и в сравнение при HMR, а на Windows регистр не гарантирован.
+            if (existsSync(dictPath)) dicts[locale] = resolveRealPath(dictPath)
+        }
+        if (Object.keys(dicts).length > 0) registry[entry.name] = dicts
+    }
+
+    return registry
 }

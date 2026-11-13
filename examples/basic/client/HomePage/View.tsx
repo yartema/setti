@@ -1,10 +1,27 @@
 import { useState, type JSX, type ReactNode } from 'react'
 import { Button } from '../shared/Button'
-import { useSlice, useStrictSlice, usePathname, useRouter, Link, usePageMeta } from '@tusten/core/client'
+import {
+    useSlice,
+    useStrictSlice,
+    usePathname,
+    useRouter,
+    Link,
+    usePageMeta,
+    getLocale,
+    setLocale,
+    template,
+} from '@tusten/core/client'
 import type { UserListSlice } from './Factories/usersList'
 import type { UserInfoSlice } from '../User/loaders/userInfo'
 import { Service } from '@tusten/core'
 import { usersService } from './Factories/usersList'
+import rk from 'i18n!HomePage'
+
+/**
+ * Языки для переключателя. Клиент не видит `tusten.config.ts`, поэтому список дублируем:
+ * он должен совпадать с `i18n.locales` в конфиге.
+ */
+const SWITCHER_LOCALES = ['ru', 'en'] as const
 
 /**
  * Главная страница демо.
@@ -20,6 +37,7 @@ import { usersService } from './Factories/usersList'
 export function View(): JSX.Element {
     const user = useStrictSlice<UserInfoSlice>('userInfo')
     const userState = user.getState()
+    const currentLocale = getLocale()
     usePageMeta({
         meta: [{ name: 'description', content: 'Home page of tusten demo' }],
     })
@@ -70,7 +88,9 @@ export function View(): JSX.Element {
                             👤
                         </div>
                         <div>
-                            <p className="font-medium text-slate-900">{userState?.name ?? 'anonymous'}</p>
+                            <p className="font-medium text-slate-900">
+                                {template(rk('Привет, {name}!'), { name: userState?.name ?? 'anonymous' })}
+                            </p>
                             <p className="text-sm text-slate-500">id: {userState?.id ?? '—'}</p>
                             {userState && (
                                 <p className="mt-1 text-xs text-slate-500">
@@ -87,13 +107,33 @@ export function View(): JSX.Element {
                 <Card title="UserList" badge="useSlice" badgeHint="page · may be undefined">
                     {listState ? (
                         <div>
-                            <p className="text-sm text-slate-500">{listState.total} users, перезагрузить:</p>
-                            <button
-                                onClick={() => listState.reload()}
-                                className="mt-2 rounded-md bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-200"
-                            >
-                                reload()
-                            </button>
+                            <p className="text-sm text-slate-500">
+                                {template(
+                                    rk('{n, plural, one {# пользователь} few {# пользователя} many {# пользователей} other {# пользователя}}'),
+                                    { n: listState.total },
+                                )}
+                                :
+                            </p>
+                            <div className="flex flex-row gap-2">
+                                <button
+                                    onClick={() => listState.reload()}
+                                    className="mt-2 rounded-md bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                                >
+                                    {`${rk('перезагрузить')}()`}
+                                </button>
+                                <button
+                                    onClick={() => user?.setState({ name: 'Новое имя' })}
+                                    className="mt-2 rounded-md bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                                >
+                                    {`${rk('Изменить имя')} user`}
+                                </button>
+                                <button
+                                    onClick={() => list?.setState({ total: 895632 })}
+                                    className="mt-2 rounded-md bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                                >
+                                    {`${rk('Изменить')} total`}
+                                </button>
+                            </div>
                             <div className="mt-3 flex flex-wrap gap-1">
                                 {listState.users.slice(0, 10).map((u) => (
                                     <span
@@ -173,7 +213,24 @@ export function View(): JSX.Element {
                         </Link>
                     </div>
                 </Card>
-                <Button>Кнопка с локальным CSS</Button>
+                <Card title="i18n" badge="setLocale" badgeHint="cookie + reload">
+                    <p className="text-sm text-slate-500">
+                        {rk('Язык интерфейса')}: <code className="font-mono">{currentLocale ?? '—'}</code>
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {SWITCHER_LOCALES.map((l) => (
+                            <button
+                                key={l}
+                                onClick={() => setLocale(l)}
+                                disabled={l === currentLocale}
+                                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:border-indigo-600 disabled:bg-indigo-600 disabled:text-white"
+                            >
+                                {l}
+                            </button>
+                        ))}
+                    </div>
+                </Card>
+                <Button>{`${rk('Кнопка с локальным')} CSS`}</Button>
             </div>
         </div>
     )

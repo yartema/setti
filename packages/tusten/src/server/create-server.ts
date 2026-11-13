@@ -3,17 +3,29 @@ import fastifyStatic from '@fastify/static'
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import { createSSRHandler } from './ssr-handler'
+import { createSSRHandler, type SSRI18nRuntime } from './ssr-handler'
 import { createDevModuleLoader, createProdModuleLoader } from './module-loader'
 import { tustenPlugin } from '../vite/plugin'
-import { resolveCssMainPath } from '../utils/css'
+import { resolveCssPaths } from '../utils/css'
 import { createRpcExecutor } from './rpc-executor'
 import { createRpcHandler } from './rpc-handler'
 import { getRpcContext } from './rpc/als'
+import { currentRequestLocale, recordRequestI18nUse } from './i18n/als'
 import type { ComponentType, ReactNode } from 'react'
-import type { Plugin, UserConfig } from 'vite'
 import type { FactoryMap, Manifest, MiddlewareDef, ResolvedTustenConfig, RouteTree, RpcExecutor } from '../types'
+import type { I18nDictionary } from '../client/i18n/create-rk'
 import type { RpcRegistry } from './rpc-registry'
+
+/**
+ * i18n-часть `tusten/client`, которую использует SSR. Берётся из того же модуля,
+ * что и `RootProvider`: резолвер и хук должны попасть в инстанс, которым рендерит `rk`.
+ */
+interface TustenClientI18nApi {
+    setLocaleResolver(fn: () => string | undefined): void
+    setI18nUsageHook(hook: ((moduleId: string) => void) | undefined): void
+    loadRegisteredDictionaries(locale?: string): Promise<void>
+    getRegisteredDictionary(moduleId: string, locale: string): I18nDictionary | undefined
+}
 
 /** Режим работы сервера. */
 export type TustenServerMode = 'development' | 'production'
@@ -35,7 +47,7 @@ export interface CreateServerOptions {
  * Создаёт Fastify-сервер.
  *
  * Регистрирует (в порядке):
- *   1. RPC endpoint `POST /service` (если `config.rpc.enabled`).
+ *   1. RPC endpoint `POST /service` (если `config.server.rpc.enabled`).
  *   2. Fastify-плагины (`config.server.plugins`).
  *   3. `/__tusten/prefetch/:routeId` — SPA-navigation (wrapped in ALS).
  *   4. API-роуты (`config.server.routes`).
@@ -60,9 +72,9 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
         logger: { level: 'info' },
         ...config.fastify,
     })
-    const clientDir = path.resolve(projectDir, config.clientDir)
+    const clientDir = path.resolve(projectDir, config.client.clientDir)
     const outDir = path.resolve(projectDir, config.build.outDir)
-    const cssMainPath = resolveCssMainPath(projectDir, clientDir, config)
+    const cssFiles = resolveCssPaths(projectDir, clientDir, config)
 
     let RootProvider: ComponentType<{
         children?: ReactNode
@@ -79,6 +91,7 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
     let RootNotFound: ComponentType
     let loadModule: (spec: string) => Promise<unknown>
     let entryScriptSrc: string
+    let i18nClient: TustenClientI18nApi
     let clientManifest: Record<string, never> | null = null
     const clientOutPublicPrefix = '/'
     const isDev = mode === 'development'
@@ -86,7 +99,7 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
     if (isDev) {
         const { createServer } = await import('vite')
         const react = (await import('@vitejs/plugin-react')).default
-        const userVite = (config.vite ?? {}) as UserConfig
+        const userVite = config.vite ?? {}
 
         const vite = await createServer({
             ...userVite,
@@ -110,10 +123,10 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
                     routeTree,
                     factoryModules,
                     globalFactories: globalRegistry,
-                    cssMain: cssMainPath,
+                    cssFiles,
                 }),
                 react(),
-                ...((userVite.plugins as Plugin[]) ?? []),
+                ...(userVite.plugins ?? []),
             ],
             resolve: { ...(userVite.resolve ?? {}), preserveSymlinks: false },
         })
@@ -122,7 +135,7 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
         fastify.addHook('onRequest', (req, reply, done) => {
             const url = req.url.split('?')[0]
             const isHtml = req.headers.accept?.includes('text/html')
-            const isApi = url.startsWith('/api/') || url.startsWith('/__tusten/') || url === config.rpc.url
+            const isApi = url.startsWith('/api/') || url.startsWith('/__tusten/') || url === config.server.rpc.url
             if (isHtml || isApi) {
                 done()
                 return
@@ -139,8 +152,9 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
             RootErrorBoundary: typeof RootErrorBoundary
             RootLoading: typeof RootLoading
             RootNotFound: typeof RootNotFound
-        }
+        } & TustenClientI18nApi
 
+        i18nClient = tustenClient
         RootProvider = tustenClient.RootProvider
         SliceRegistry = tustenClient.SliceRegistry
         renderLayoutChain = tustenClient.renderLayoutChain
@@ -171,8 +185,9 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
             RootErrorBoundary: typeof RootErrorBoundary
             RootLoading: typeof RootLoading
             RootNotFound: typeof RootNotFound
-        }
+        } & TustenClientI18nApi
 
+        i18nClient = entryMod
         RootProvider = entryMod.RootProvider
         SliceRegistry = entryMod.SliceRegistry
         renderLayoutChain = entryMod.renderLayoutChain
@@ -191,7 +206,7 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
 
     // ---- RPC executor + /service endpoint ----
     let rpcExecutor: RpcExecutor | undefined
-    if (config.rpc.enabled && rpcRegistry) {
+    if (config.server.rpc.enabled && rpcRegistry) {
         rpcExecutor = createRpcExecutor(rpcRegistry, config)
 
         // Прокидываем ALS-геттер в globalThis — server-bridge использует его
@@ -199,7 +214,7 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
         ;(globalThis as unknown as { __rootRpcGetContext?: () => unknown }).__rootRpcGetContext = getRpcContext
 
         const rpcHandler = createRpcHandler({ registry: rpcRegistry, config })
-        fastify.post(config.rpc.url, rpcHandler)
+        fastify.post(config.server.rpc.url, rpcHandler)
     }
 
     // ---- Server plugins ----
@@ -223,6 +238,19 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
         (m) => m.side === 'server' || m.side === 'both',
     )
 
+    // ---- i18n: locale запроса и словари для SSR ----
+    // Резолвер и хук регистрируем один раз: locale и учёт `rk` дальше идут через ALS,
+    // поэтому параллельные запросы с разной locale не влияют друг на друга.
+    let i18nRuntime: SSRI18nRuntime | null = null
+    if (config.i18n) {
+        i18nClient.setLocaleResolver(currentRequestLocale)
+        i18nClient.setI18nUsageHook(recordRequestI18nUse)
+        i18nRuntime = {
+            loadDictionaries: (locale) => i18nClient.loadRegisteredDictionaries(locale),
+            getDictionary: (moduleId, locale) => i18nClient.getRegisteredDictionary(moduleId, locale),
+        }
+    }
+
     const ssrHandler = createSSRHandler({
         config,
         projectDir,
@@ -240,6 +268,7 @@ export async function createServer(options: CreateServerOptions): Promise<Fastif
         clientOutPublicPrefix,
         globalMiddleware,
         rpcExecutor,
+        i18n: i18nRuntime,
         renderLayoutChain,
         RootErrorBoundary,
         RootLoading,
