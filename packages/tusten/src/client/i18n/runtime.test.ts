@@ -40,7 +40,7 @@ function countingLoader(dict: Record<string, string>): { loader: I18nLoader; spy
 
 describe('initI18n: гидрация из HTML', () => {
     it('модуль, созданный после initI18n, сразу переводит без await', () => {
-        mods.runtime.initI18n({ locale: 'en', dicts: { HomePage: { 'Помощь': 'Help' } } })
+        mods.runtime.initI18n({ locale: 'en', dicts: { HomePage: { Помощь: 'Help' } } })
         const rk = mods.createRk('HomePage', {})
         expect(rk('Помощь')).toBe('Help')
     })
@@ -49,7 +49,7 @@ describe('initI18n: гидрация из HTML', () => {
         const rk = mods.createRk('HomePage', {})
         expect(rk('Помощь')).toBe('Помощь')
 
-        mods.runtime.initI18n({ locale: 'en', dicts: { HomePage: { 'Помощь': 'Help' } } })
+        mods.runtime.initI18n({ locale: 'en', dicts: { HomePage: { Помощь: 'Help' } } })
         expect(rk('Помощь')).toBe('Help')
     })
 
@@ -59,8 +59,8 @@ describe('initI18n: гидрация из HTML', () => {
     })
 
     it('модуль без словаря в HTML ходит по loader, а не получает чужой словарь', async () => {
-        mods.runtime.initI18n({ locale: 'en', dicts: { HomePage: { 'Помощь': 'Help' } } })
-        const { loader, spy } = countingLoader({ 'Hello': 'Hi' })
+        mods.runtime.initI18n({ locale: 'en', dicts: { HomePage: { Помощь: 'Help' } } })
+        const { loader, spy } = countingLoader({ Hello: 'Hi' })
         const rk = mods.createRk('AboutPage', { en: loader })
 
         expect(rk('Hello')).toBe('Hello')
@@ -74,8 +74,8 @@ describe('initI18n: гидрация из HTML', () => {
 
 describe('loadRegisteredDictionaries', () => {
     it('не делает запросов для словарей, уже пришедших из HTML', async () => {
-        mods.runtime.initI18n({ locale: 'en', dicts: { HomePage: { 'Помощь': 'Help' } } })
-        const { loader, spy } = countingLoader({ 'Помощь': 'Other' })
+        mods.runtime.initI18n({ locale: 'en', dicts: { HomePage: { Помощь: 'Help' } } })
+        const { loader, spy } = countingLoader({ Помощь: 'Other' })
         mods.createRk('HomePage', { en: loader })
 
         await mods.runtime.loadRegisteredDictionaries()
@@ -104,12 +104,12 @@ describe('loadRegisteredDictionaries', () => {
 describe('getRegisteredDictionary и dictionary', () => {
     it('возвращает копию загруженного словаря', () => {
         const rk = mods.createRk('HomePage', {})
-        rk.seed('en', { 'Помощь': 'Help' })
+        rk.seed('en', { Помощь: 'Help' })
 
         const copy = mods.runtime.getRegisteredDictionary('HomePage', 'en')
-        expect(copy).toEqual({ 'Помощь': 'Help' })
+        expect(copy).toEqual({ Помощь: 'Help' })
         copy!['Помощь'] = 'mutated'
-        expect(rk.dictionary('en')).toEqual({ 'Помощь': 'Help' })
+        expect(rk.dictionary('en')).toEqual({ Помощь: 'Help' })
     })
 
     it('для незагруженного словаря и неизвестного модуля — undefined', () => {

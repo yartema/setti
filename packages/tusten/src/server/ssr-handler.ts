@@ -373,11 +373,7 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                  */
                 const renderNotFound = (node: ReactNode): string =>
                     renderToString(
-                        createElement(
-                            RootProvider,
-                            { sliceRegistry: nfRegistry as unknown, router: nfRouter },
-                            node,
-                        ),
+                        createElement(RootProvider, { sliceRegistry: nfRegistry as unknown, router: nfRouter }, node),
                     )
 
                 let notFoundHtml: string
@@ -389,7 +385,10 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                     if (i18nRuntime && i18nLocale !== undefined) await i18nRuntime.loadDictionaries(i18nLocale)
                     notFoundHtml = renderNotFound(createElement(NotFound))
                 } catch (err) {
-                    console.warn('[tusten] failed to render config.client.components.notFound, fallback to default:', err)
+                    console.warn(
+                        '[tusten] failed to render config.client.components.notFound, fallback to default:',
+                        err,
+                    )
                     notFoundHtml = renderNotFound(createElement(RootNotFound))
                 }
 
@@ -507,7 +506,10 @@ export function createSSRHandler(options: SSRHandlerOptions) {
                 ? loadModuleCached(errorComponentSpec).then(
                       (mod) => mod as ComponentType<{ error: Error }>,
                       (err) => {
-                          console.warn('[tusten] failed to load config.client.components.error, fallback to default:', err)
+                          console.warn(
+                              '[tusten] failed to load config.client.components.error, fallback to default:',
+                              err,
+                          )
                           return undefined
                       },
                   )

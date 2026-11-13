@@ -22,7 +22,7 @@ describe('serializeForScript', () => {
     it('результат остаётся валидным JSON с исходными значениями', () => {
         const value = {
             locale: 'en',
-            dicts: { HomePage: { 'Помощь': `</script> &${LS}"quoted"` } },
+            dicts: { HomePage: { Помощь: `</script> &${LS}"quoted"` } },
         }
         expect(JSON.parse(serializeForScript(value))).toEqual(value)
     })
@@ -30,11 +30,11 @@ describe('serializeForScript', () => {
 
 describe('buildI18nBootScript', () => {
     it('строит inline-скрипт с locale и словарями', () => {
-        const html = buildI18nBootScript('en', { HomePage: { 'Помощь': 'Help' } })
+        const html = buildI18nBootScript('en', { HomePage: { Помощь: 'Help' } })
         expect(html.startsWith('<script>window.__ROOT_I18N__=')).toBe(true)
         expect(html.endsWith('</script>')).toBe(true)
         const json = html.slice('<script>window.__ROOT_I18N__='.length, -'</script>'.length)
-        expect(JSON.parse(json)).toEqual({ locale: 'en', dicts: { HomePage: { 'Помощь': 'Help' } } })
+        expect(JSON.parse(json)).toEqual({ locale: 'en', dicts: { HomePage: { Помощь: 'Help' } } })
     })
 
     it('пустой набор словарей — только locale', () => {

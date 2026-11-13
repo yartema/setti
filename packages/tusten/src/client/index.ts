@@ -50,10 +50,5 @@ export type { TemplateParams } from './i18n/template'
 export { getLocale, setLocale, setLocaleResolver } from './i18n/locale'
 export type { LocaleResolver } from './i18n/locale'
 // Внутреннее: сгенерированные entry (клиентский и SSR) передают сюда данные из HTML.
-export {
-    initI18n,
-    loadRegisteredDictionaries,
-    getRegisteredDictionary,
-    setI18nUsageHook,
-} from './i18n/runtime'
+export { initI18n, loadRegisteredDictionaries, getRegisteredDictionary, setI18nUsageHook } from './i18n/runtime'
 export type { I18nBootstrap } from './i18n/runtime'

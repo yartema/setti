@@ -41,7 +41,15 @@ const RESOLVED_SSR_ENTRY = '\0' + VIRTUAL_SSR_ENTRY
  * @returns Vite-плагин.
  */
 export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
-    const { projectDir, clientDir, config, routeTree, factoryModules = [], globalFactories = {}, cssFiles = [] } = options
+    const {
+        projectDir,
+        clientDir,
+        config,
+        routeTree,
+        factoryModules = [],
+        globalFactories = {},
+        cssFiles = [],
+    } = options
 
     /**
      * Резолвит спеку клиентского модуля в Vite-путь.
@@ -227,7 +235,11 @@ export function tustenPlugin(options: TustenVitePluginOptions): Plugin {
     // после перезапуска dev-сервера (так же, как маршруты из router.ts).
     const i18nRegistry = scanI18n(clientDir, config.i18n)
     // Нормализованные пути для сравнения в handleHotUpdate (watcher отдаёт forward-slash).
-    const i18nDictFiles = new Set(Object.values(i18nRegistry).flatMap((dicts) => Object.values(dicts)).map(toPosix))
+    const i18nDictFiles = new Set(
+        Object.values(i18nRegistry)
+            .flatMap((dicts) => Object.values(dicts))
+            .map(toPosix),
+    )
 
     return {
         name: 'tusten',

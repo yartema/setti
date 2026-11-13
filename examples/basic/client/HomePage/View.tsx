@@ -109,7 +109,9 @@ export function View(): JSX.Element {
                         <div>
                             <p className="text-sm text-slate-500">
                                 {template(
-                                    rk('{n, plural, one {# пользователь} few {# пользователя} many {# пользователей} other {# пользователя}}'),
+                                    rk(
+                                        '{n, plural, one {# пользователь} few {# пользователя} many {# пользователей} other {# пользователя}}',
+                                    ),
                                     { n: listState.total },
                                 )}
                                 :

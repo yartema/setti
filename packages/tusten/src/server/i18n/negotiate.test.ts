@@ -6,10 +6,7 @@ const i18n: TustenI18nConfig = { defaultLocale: 'ru', locales: ['ru', 'en'] }
 
 describe('resolveRequestLocale: приоритет источников', () => {
     it('cookie важнее Accept-Language', () => {
-        const locale = resolveRequestLocale(
-            { cookie: 'tusten_locale=en', acceptLanguage: 'ru-RU,ru;q=0.9' },
-            i18n,
-        )
+        const locale = resolveRequestLocale({ cookie: 'tusten_locale=en', acceptLanguage: 'ru-RU,ru;q=0.9' }, i18n)
         expect(locale).toBe('en')
     })
 

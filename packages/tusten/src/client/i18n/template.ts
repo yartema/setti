@@ -378,11 +378,7 @@ function render(nodes: Node[], params: TemplateParams, locale: string | undefine
  * @returns строка с подстановками.
  * @throws {TustenError} если шаблон синтаксически некорректен.
  */
-export function template(
-    str: string,
-    params: TemplateParams = {},
-    locale: string | undefined = getLocale(),
-): string {
+export function template(str: string, params: TemplateParams = {}, locale: string | undefined = getLocale()): string {
     if (!/[{}\\]/.test(str)) return str
     return render(compile(str), params, locale)
 }

@@ -22,11 +22,15 @@ export function normalizeI18n(raw: TustenI18nConfig | undefined): TustenI18nConf
     }
     for (const locale of locales) {
         if (!isValidLocale(locale)) {
-            throw new TustenError(`i18n.locales contains invalid locale "${String(locale)}" (expected e.g. "en", "pt-BR")`)
+            throw new TustenError(
+                `i18n.locales contains invalid locale "${String(locale)}" (expected e.g. "en", "pt-BR")`,
+            )
         }
     }
     if (!locales.includes(defaultLocale)) {
-        throw new TustenError(`i18n.defaultLocale "${defaultLocale}" must be one of i18n.locales [${locales.join(', ')}]`)
+        throw new TustenError(
+            `i18n.defaultLocale "${defaultLocale}" must be one of i18n.locales [${locales.join(', ')}]`,
+        )
     }
 
     // Дубликаты не несут смысла и могли бы породить двойные записи в реестре словарей.

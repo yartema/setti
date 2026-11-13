@@ -205,7 +205,10 @@ describe('loadConfig', () => {
 
     it('пустой locales — TustenError', async () => {
         const dir = await makeProjectDir('i18n-empty')
-        await writeFile(join(dir, 'tusten.config.ts'), `export default { i18n: { defaultLocale: 'ru', locales: [] } }\n`)
+        await writeFile(
+            join(dir, 'tusten.config.ts'),
+            `export default { i18n: { defaultLocale: 'ru', locales: [] } }\n`,
+        )
         await expect(loadConfig(dir)).rejects.toThrow(/non-empty array/)
     })
 

@@ -56,9 +56,7 @@ describe('serializeState', () => {
     })
 
     it('без config — undefined (совместимость со снимками до P0.2)', async () => {
-        const slices = new Map([
-            ['a', { dataFactoryName: 'A:LoaderA', state: 1, scope: 'page' as const }],
-        ])
+        const slices = new Map([['a', { dataFactoryName: 'A:LoaderA', state: 1, scope: 'page' as const }]])
         const result = await serializeState(slices, tmpRoot, clientDir)
         expect(result.slices.a.config).toBeUndefined()
     })

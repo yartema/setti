@@ -12,7 +12,7 @@ import { TustenError } from '../errors'
 describe('parseDictionary', () => {
     it('разбирает словарь ключ → строка', () => {
         expect(parseDictionary(`{"Помощь": "Help", "Привет, {name}!": "Hi, {name}!"}`, 'x.json')).toEqual({
-            'Помощь': 'Help',
+            Помощь: 'Help',
             'Привет, {name}!': 'Hi, {name}!',
         })
     })
@@ -48,11 +48,11 @@ describe('generateI18nModule', () => {
 
 describe('generateI18nDictModule', () => {
     it('генерирует export default с JSON-словарём', () => {
-        const code = generateI18nDictModule({ 'Помощь': 'Help' })
+        const code = generateI18nDictModule({ Помощь: 'Help' })
         expect(code.startsWith('export default {')).toBe(true)
         // Результат должен быть валидным JS и вернуть тот же словарь.
         const body = code.replace(/^export default /, '').trim()
-        expect(JSON.parse(body)).toEqual({ 'Помощь': 'Help' })
+        expect(JSON.parse(body)).toEqual({ Помощь: 'Help' })
     })
 })
 
@@ -143,7 +143,10 @@ describe('tustenPlugin: i18n virtual modules', () => {
         })
         const load = loadOf(plugin)
         const watched: string[] = []
-        const code = (await load.call({ addWatchFile: (f: string) => watched.push(f) }, '\0i18n-dict:HomePage:en')) as string
+        const code = (await load.call(
+            { addWatchFile: (f: string) => watched.push(f) },
+            '\0i18n-dict:HomePage:en',
+        )) as string
         expect(code).toContain(`"Помощь": "Help"`)
         expect(watched).toHaveLength(1)
         expect(watched[0].endsWith(join('HomePage', 'lang', 'en', 'en.json'))).toBe(true)
